@@ -4,6 +4,7 @@ from openpyxl.utils import get_column_letter
 import re
 from io import BytesIO
 from openpyxl.styles import Alignment, Font
+from openpyxl.utils import range_boundaries
 
 DEBUG = True
 
@@ -14,12 +15,57 @@ process_button = st.button("process")
 players_sheet_name  = "PlayersList"
 sheet_to_use = "Copy of Teams"
 
+C_COLOR = "FFFFFF00"
+VC_COLOR = "FF00FF00"
+
+
 def player_credit_from_excel_sheet(sheet):
     players_credits = {}
     for row in sheet.iter_rows(min_row=2, values_only=True):  # Assuming first row is header
         name, credit = row
         players_credits[name] = credit if credit is not None else 0
     return players_credits
+
+def check_all_team_marked_c_and_vc(sheet):
+    last_column_with_data = 0 
+    for column in sheet.iter_rows(min_row=1, max_row=2):
+        for cell in column:
+            if cell.value is not None:
+                last_column_with_data = cell.column
+
+    last_col_name = get_column_letter(last_column_with_data)
+    
+    last_column_with_data = last_column_with_data - 1
+
+    last_row_index = 12
+    last_idx = f"{last_col_name}{last_row_index}"
+
+    # # Create the range string
+    gph_idx = f"B2:{last_idx}"
+
+    min_col, min_row, max_col, max_row = range_boundaries(gph_idx)
+    c_vc_missing = []
+    for col in range(min_col, max_col + 1):
+        _c, _vc = False, False
+        for row in range(min_row, max_row + 1):
+            cell = sheet.cell(row=row, column=col)
+
+            clr = cell.fill.start_color.index
+
+            if clr == C_COLOR:
+                _c = True
+            if clr == VC_COLOR:
+                _vc = True
+        
+        if _c and _vc:
+            pass
+        else:
+            c_vc_missing.append(col)
+    
+    if len(c_vc_missing) == 0:
+        return True, c_vc_missing
+    else:
+        return False, c_vc_missing
 
 def compute_and_download(excel_data, is_player_sheet_exists):
 
@@ -39,11 +85,18 @@ def compute_and_download(excel_data, is_player_sheet_exists):
     credits_rows = []
     for r in excel_data:
         crow = []
-        for pname in r:
-            crow.append(player_credit.get(pname,0))
+        for r_val in r:
+            (pname, factor), = r_val.items()
+            crow.append(player_credit.get(pname,0) * factor)
         credits_rows.append(crow)
-    
 
+        
+    # for r in excel_data:
+    #     crow = []
+    #     for pname in r:
+    #         crow.append(player_credit.get(pname,0))
+    #     credits_rows.append(crow)
+    
     # Calculate the number of columns
     num_columns = len(credits_rows[0])
 
@@ -117,72 +170,87 @@ def compute_and_download(excel_data, is_player_sheet_exists):
 if process_button:
     wb = load_workbook(teams_file, read_only=False)
     
-    sheet_names = wb.sheetnames
-    sheet_name_lower = [s.lower() for s in sheet_names]
-    
-    data = []
-    if sheet_to_use in wb.sheetnames:
-        sheet = wb[sheet_to_use]
-        last_column_with_data = 0 
-        for column in sheet.iter_rows(min_row=1, max_row=2):
-            for cell in column:
-                if cell.value is not None:
-                    last_column_with_data = cell.column
+    is_all_okay, missing_team = check_all_team_marked_c_and_vc(wb[sheet_to_use])
+    if is_all_okay:
 
-        last_col_name = get_column_letter(last_column_with_data)
+        sheet_names = wb.sheetnames
+        sheet_name_lower = [s.lower() for s in sheet_names]
         
-        last_column_with_data = last_column_with_data - 1
+        data = []
+        if sheet_to_use in wb.sheetnames:
+            sheet = wb[sheet_to_use]
+            last_column_with_data = 0 
+            for column in sheet.iter_rows(min_row=1, max_row=2):
+                for cell in column:
+                    if cell.value is not None:
+                        last_column_with_data = cell.column
 
-        st.write("team count : ", last_column_with_data)
-
-        last_row_index = 12
-        last_idx = f"{last_col_name}{last_row_index}"
-
-        # Create the range string
-        gph_idx = f"B2:{last_idx}"
-
-        for row in sheet[gph_idx]:
-            row_data = [cell.value for cell in row]
-            data.append(row_data)
-
-    if players_sheet_name.lower() in sheet_name_lower:
-        st.write("Existing Credit Sheet Found.")
-        sheet = wb[players_sheet_name]
-        player_credit = player_credit_from_excel_sheet(sheet)
-
-        form = st.form("my_form")
-        with form:
-            st.header("Player Credits")
-            i = 1 
-            for name in player_credit:
-                input_key = f"input_{i}_{name}"
-                player_credit[name] = st.text_input(f"{i}.{name}", 
-                                                            value=player_credit[name],
-                                                            key=input_key)
-                i = i + 1
+            last_col_name = get_column_letter(last_column_with_data)
             
-            submit_btn = form.form_submit_button("Submit", on_click=compute_and_download,args=(data,True) )
+            last_column_with_data = last_column_with_data - 1
 
+            st.write("team count : ", last_column_with_data)
+
+            last_row_index = 12
+            last_idx = f"{last_col_name}{last_row_index}"
+
+            # Create the range string
+            gph_idx = f"B2:{last_idx}"
+
+            for row in sheet[gph_idx]:
+                r_values = []
+                for cell in row:
+                    clr = cell.fill.start_color.index
+                    if clr == C_COLOR:
+                        r_values.append({cell.value:2})
+                    elif clr == VC_COLOR:
+                        r_values.append({cell.value:1.5})
+                    else:
+                        r_values.append({cell.value:1})
+                data.append(r_values)
+
+        if players_sheet_name.lower() in sheet_name_lower:
+            st.write("Existing Credit Sheet Found.")
+            sheet = wb[players_sheet_name]
+            player_credit = player_credit_from_excel_sheet(sheet)
+
+            form = st.form("my_form")
+            with form:
+                st.header("Player Credits")
+                i = 1 
+                for name in player_credit:
+                    input_key = f"input_{i}_{name}"
+                    player_credit[name] = st.text_input(f"{i}.{name}", 
+                                                                value=player_credit[name],
+                                                                key=input_key)
+                    i = i + 1
+                submit_btn = form.form_submit_button("Submit", on_click=compute_and_download,args=(data,True) )
+
+        else:
+            st.write("No Existing Credit Sheet Found.")
+            unique_players_dict = {x for l in data for x in l}
+
+            unique_players_list = list(unique_players_dict)
+
+            form = st.form("my_form")
+
+            wb.close()
+
+            with form:
+                i = 1
+                input_values = {}
+                for name in unique_players_list:
+                    input_key = f"input_{i}_{name}"
+                    input_values[input_key] = st.text_input(str(i) + "." + name, key=input_key)
+                    i = i + 1
+
+                submit_btn = form.form_submit_button("Submit", on_click=compute_and_download,args=(data,False) )
+        
     else:
-        st.write("No Existing Credit Sheet Found.")
-        unique_players_dict = {x for l in data for x in l}
+        st.write("All Teams Must Have C and VC")
+        st.write(missing_team)
 
-        unique_players_list = list(unique_players_dict)
 
-        form = st.form("my_form")
-
-        wb.close()
-
-        with form:
-            i = 1
-            input_values = {}
-            for name in unique_players_list:
-                input_key = f"input_{i}_{name}"
-                input_values[input_key] = st.text_input(str(i) + "." + name, key=input_key)
-                i = i + 1
-
-            submit_btn = form.form_submit_button("Submit", on_click=compute_and_download,args=(data,False) )
-
-           
             
                 
+                    
