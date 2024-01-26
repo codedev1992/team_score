@@ -11,21 +11,17 @@ teams_file = st.file_uploader("upload teams excel file.")
 
 process_button = st.button("process")
 
-# def transpose(l1, l2):
- 
-#     # iterate over list l1 to the length of an item 
-#     for i in range(len(l1[0])):
-#         # print(i)
-#         row =[]
-#         for item in l1:
-#             # appending to new list with values and index positions
-#             # i contains index position and item contains values
-#             row.append(item[i])
-#         l2.append(row)
-#     return l2
+players_sheet_name  = "PlayersList"
+sheet_to_use = "Copy of Teams"
 
+def player_credit_from_excel_sheet(sheet):
+    players_credits = {}
+    for row in sheet.iter_rows(min_row=2, values_only=True):  # Assuming first row is header
+        name, credit = row
+        players_credits[name] = credit if credit is not None else 0
+    return players_credits
 
-def compute_and_download(excel_data):
+def compute_and_download(excel_data, is_player_sheet_exists):
 
     player_credit = {}
     for key in st.session_state:
@@ -46,17 +42,6 @@ def compute_and_download(excel_data):
         for pname in r:
             crow.append(player_credit.get(pname,0))
         credits_rows.append(crow)
-    
-    # credit_by_team = []
-    # transpose(credits_rows,credit_by_team)
-
-    # #st.write(credit_by_team)
-
-    # for sublist in credit_by_team:
-    #     # Calculate the sum of the sublist
-    #     sublist_sum = sum(sublist)
-    #     # Append the sum to the sublist
-    #     sublist.append(sublist_sum)
     
 
     # Calculate the number of columns
@@ -80,10 +65,32 @@ def compute_and_download(excel_data):
     file_name = teams_file.name
 
     wb = load_workbook(teams_file, read_only=False)
-    if "Teams" in wb.sheetnames:
-        sheet = wb["Teams"]
+    
+    sheet_names = wb.sheetnames
+    sheet_name_lower = [s.lower() for s in sheet_names]
 
-        start_row = 50
+    if players_sheet_name.lower() in sheet_name_lower:
+        player_sheet = wb[players_sheet_name]
+        wb.remove(player_sheet)
+        player_sheet = wb.create_sheet(players_sheet_name)
+    else:
+        player_sheet = wb.create_sheet(players_sheet_name)
+    
+    #append the new / updated values
+    player_sheet.append(["Name", "Credit"])
+    for name, credit in player_credit.items():
+        player_sheet.append([name, credit])
+    
+    # Set the column widths for better readability
+    for column in player_sheet.columns:
+        max_length = max(len(str(cell.value)) for cell in column)
+        player_sheet.column_dimensions[get_column_letter(column[0].column)].width = max_length
+    
+
+    if sheet_to_use in wb.sheetnames:
+        sheet = wb[sheet_to_use]
+
+        start_row = 60
         start_rol = 2
 
         for row_index, row in enumerate(credits_rows, start=start_row):  # Start=1 since Excel rows are 1-indexed
@@ -107,11 +114,15 @@ def compute_and_download(excel_data):
     )
 
 
-        
 if process_button:
     wb = load_workbook(teams_file, read_only=False)
-    if "Teams" in wb.sheetnames:
-        sheet = wb["Teams"]
+    
+    sheet_names = wb.sheetnames
+    sheet_name_lower = [s.lower() for s in sheet_names]
+    
+    data = []
+    if sheet_to_use in wb.sheetnames:
+        sheet = wb[sheet_to_use]
         last_column_with_data = 0 
         for column in sheet.iter_rows(min_row=1, max_row=2):
             for cell in column:
@@ -130,15 +141,31 @@ if process_button:
         # Create the range string
         gph_idx = f"B2:{last_idx}"
 
-        data = []
         for row in sheet[gph_idx]:
             row_data = [cell.value for cell in row]
             data.append(row_data)
-        
-        unique_players_dict = {x for l in data for x in l}
 
-        # for row in data:
-        #     st.write(row)
+    if players_sheet_name.lower() in sheet_name_lower:
+        st.write("Existing Credit Sheet Found.")
+        sheet = wb[players_sheet_name]
+        player_credit = player_credit_from_excel_sheet(sheet)
+
+        form = st.form("my_form")
+        with form:
+            st.header("Player Credits")
+            i = 1 
+            for name in player_credit:
+                input_key = f"input_{i}_{name}"
+                player_credit[name] = st.text_input(f"{i}.{name}", 
+                                                            value=player_credit[name],
+                                                            key=input_key)
+                i = i + 1
+            
+            submit_btn = form.form_submit_button("Submit", on_click=compute_and_download,args=(data,True) )
+
+    else:
+        st.write("No Existing Credit Sheet Found.")
+        unique_players_dict = {x for l in data for x in l}
 
         unique_players_list = list(unique_players_dict)
 
@@ -149,12 +176,12 @@ if process_button:
         with form:
             i = 1
             input_values = {}
-            for pname in unique_players_list:
-                input_key = f"input_{i}_{pname}"
-                input_values[input_key] = st.text_input(str(i) + "." + pname, key=input_key)
+            for name in unique_players_list:
+                input_key = f"input_{i}_{name}"
+                input_values[input_key] = st.text_input(str(i) + "." + name, key=input_key)
                 i = i + 1
 
-            submit_btn = form.form_submit_button("Submit", on_click=compute_and_download,args=(data,) )
+            submit_btn = form.form_submit_button("Submit", on_click=compute_and_download,args=(data,False) )
 
            
             
