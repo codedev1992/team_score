@@ -15,8 +15,8 @@ process_button = st.button("process")
 players_sheet_name  = "PlayersList"
 sheet_to_use = "Copy of Teams"
 
-C_COLOR = "FFFFFF00"
-VC_COLOR = "FF00FF00"
+C_COLOR = "FF00FF00"
+VC_COLOR = "FFFFFF00" 
 
 
 def player_credit_from_excel_sheet(sheet):
