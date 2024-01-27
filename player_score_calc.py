@@ -228,7 +228,7 @@ if process_button:
 
         else:
             st.write("No Existing Credit Sheet Found.")
-            unique_players_dict = {x for l in data for x in l}
+            unique_players_dict = {list(x.keys())[0] for l in data for x in l}
 
             unique_players_list = list(unique_players_dict)
 
