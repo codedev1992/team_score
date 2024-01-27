@@ -78,7 +78,10 @@ def compute_and_download(excel_data, is_player_sheet_exists):
             # Process the value as needed
             pname = re.sub("input_[\d]+_", "", key)
 
-            player_credit[pname] = eval(value) 
+            if value is None:
+                player_credit[pname] = 0 
+            else:
+                player_credit[pname] = eval(value)
     
     #st.write(player_credit)
 
@@ -200,13 +203,14 @@ if process_button:
             for row in sheet[gph_idx]:
                 r_values = []
                 for cell in row:
-                    clr = cell.fill.start_color.index
-                    if clr == C_COLOR:
-                        r_values.append({cell.value:2})
-                    elif clr == VC_COLOR:
-                        r_values.append({cell.value:1.5})
-                    else:
-                        r_values.append({cell.value:1})
+                    if cell.value is not None:
+                        clr = cell.fill.start_color.index
+                        if clr == C_COLOR:
+                            r_values.append({cell.value:2})
+                        elif clr == VC_COLOR:
+                            r_values.append({cell.value:1.5})
+                        else:
+                            r_values.append({cell.value:1})
                 data.append(r_values)
 
         if players_sheet_name.lower() in sheet_name_lower:
