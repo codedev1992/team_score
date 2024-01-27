@@ -78,7 +78,7 @@ def compute_and_download(excel_data, is_player_sheet_exists):
             # Process the value as needed
             pname = re.sub("input_[\d]+_", "", key)
 
-            if value is None:
+            if value is None or value == "":
                 player_credit[pname] = 0 
             else:
                 player_credit[pname] = eval(value)
