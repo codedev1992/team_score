@@ -51,13 +51,17 @@ def check_all_team_marked_c_and_vc(sheet):
         _c, _vc = False, False
         for row in range(min_row, max_row + 1):
             cell = sheet.cell(row=row, column=col)
-
-            clr = cell.fill.start_color.index
-
-            if clr == C_COLOR:
+            if cell.value == "E":
                 _c = True
-            if clr == VC_COLOR:
                 _vc = True
+                break
+            else:
+                clr = cell.fill.start_color.index
+
+                if clr == C_COLOR:
+                    _c = True
+                if clr == VC_COLOR:
+                    _vc = True
         
         if _c and _vc:
             pass
@@ -274,7 +278,10 @@ if process_button:
                 input_values = {}
                 for name in unique_players_list:
                     input_key = f"input_{i}_{name}"
-                    input_values[input_key] = st.text_input(str(i) + "." + name, key=input_key)
+                    if name != "E":
+                        input_values[input_key] = st.text_input(str(i) + "." + name, key=input_key)
+                    else:
+                        input_values[input_key] = st.text_input(str(i) + "." + name, key=input_key, value= 0)
                     i = i + 1
 
                 submit_btn = form.form_submit_button("Submit", on_click=compute_and_download,args=(data,False) )
