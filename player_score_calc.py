@@ -14,10 +14,12 @@ process_button = st.button("process")
 
 players_sheet_name  = "PlayersList"
 sheet_to_use = "Copy of Teams"
+teams_list_sheet_name = "TeamsList"
 
 C_COLOR = "FF00FF00"
 VC_COLOR = "FFFFFF00" 
 
+TEAMS = []
 
 def player_credit_from_excel_sheet(sheet):
     players_credits = {}
@@ -60,7 +62,7 @@ def check_all_team_marked_c_and_vc(sheet):
         if _c and _vc:
             pass
         else:
-            c_vc_missing.append(col)
+            c_vc_missing.append(sheet.cell(row=1, column=col).value)
     
     if len(c_vc_missing) == 0:
         return True, c_vc_missing
@@ -92,13 +94,6 @@ def compute_and_download(excel_data, is_player_sheet_exists):
             (pname, factor), = r_val.items()
             crow.append(player_credit.get(pname,0) * factor)
         credits_rows.append(crow)
-
-        
-    # for r in excel_data:
-    #     crow = []
-    #     for pname in r:
-    #         crow.append(player_credit.get(pname,0))
-    #     credits_rows.append(crow)
     
     # Calculate the number of columns
     num_columns = len(credits_rows[0])
@@ -156,10 +151,36 @@ def compute_and_download(excel_data, is_player_sheet_exists):
                 cell.font = Font(bold=True)
 
                 cell.value = value
-        
+    
+    copy_sheet = wb[sheet_to_use]
+    dif_in_score_teams = []
+
+    if teams_list_sheet_name.lower() in sheet_name_lower:
+        teams_sheet = wb[teams_list_sheet_name]
+        idx = 2
+        for v in column_sums:
+            teams_sheet["B"+str(idx)] = v
+            
+            if teams_sheet["C"+str(idx)].value and teams_sheet["C"+str(idx)].value != "":
+                diff = float(teams_sheet["C"+str(idx)].value) - float(v) 
+                print(teams_sheet["C"+str(idx)].value,v, diff)
+                if diff != 0.0 :
+                    dif_in_score_teams.append("T"+ str(teams_sheet["A"+str(idx)].value))
+            idx = idx + 1
+
+    else:
+        teams_sheet = wb.create_sheet(teams_list_sheet_name)
+        teams_sheet.append(["TeamName","Computed","Actual"])
+
+        for team_name in TEAMS:
+            teams_sheet.append(["T"+str(team_name)])
+
+
     output = BytesIO()
     wb.save(output)
     output.seek(0)
+
+    st.write("Teams with values mismatch between computed and actual : ", dif_in_score_teams)
 
     # Step 4: Create a download button
     btn = st.download_button(
@@ -172,7 +193,7 @@ def compute_and_download(excel_data, is_player_sheet_exists):
 
 if process_button:
     wb = load_workbook(teams_file, read_only=False)
-    
+
     is_all_okay, missing_team = check_all_team_marked_c_and_vc(wb[sheet_to_use])
     if is_all_okay:
 
@@ -212,6 +233,14 @@ if process_button:
                         else:
                             r_values.append({cell.value:1})
                 data.append(r_values)
+            
+            teams_name_idx = f"B1:{last_col_name}1"
+            print("teams : ", teams_name_idx)
+            for row in sheet[teams_name_idx]:
+                for cell in row:
+                    TEAMS.append(cell.value)
+            
+
 
         if players_sheet_name.lower() in sheet_name_lower:
             st.write("Existing Credit Sheet Found.")
@@ -251,7 +280,7 @@ if process_button:
                 submit_btn = form.form_submit_button("Submit", on_click=compute_and_download,args=(data,False) )
         
     else:
-        st.write("All Teams Must Have C and VC")
+        st.write("All Teams Must Have C and VC, Following Teams are having issue. ")
         st.write(missing_team)
 
 
