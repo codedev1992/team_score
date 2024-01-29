@@ -99,9 +99,9 @@ def compute_and_download(excel_data, is_player_sheet_exists):
             crow.append(player_credit.get(pname,0) * factor)
         credits_rows.append(crow)
     
+    
     # Calculate the number of columns
     num_columns = len(credits_rows[0])
-
     # Initialize a list with zeros for storing column sums
     column_sums = [0] * num_columns
 
@@ -236,6 +236,8 @@ if process_button:
                             r_values.append({cell.value:1.5})
                         else:
                             r_values.append({cell.value:1})
+                    else:
+                         r_values.append({"":0})
                 data.append(r_values)
             
             teams_name_idx = f"B1:{last_col_name}1"
@@ -278,6 +280,7 @@ if process_button:
                 input_values = {}
                 for name in unique_players_list:
                     input_key = f"input_{i}_{name}"
+                    print(name)
                     if name != "E":
                         input_values[input_key] = st.text_input(str(i) + "." + name, key=input_key)
                     else:
