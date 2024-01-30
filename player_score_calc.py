@@ -51,7 +51,7 @@ def check_all_team_marked_c_and_vc(sheet):
         _c, _vc = False, False
         for row in range(min_row, max_row + 1):
             cell = sheet.cell(row=row, column=col)
-            if cell.value == "E":
+            if cell.value == "E" or cell.value == "" or cell.value is None:
                 _c = True
                 _vc = True
                 break
