@@ -5,21 +5,160 @@ import re
 from io import BytesIO
 from openpyxl.styles import Alignment, Font
 from openpyxl.utils import range_boundaries
+from openpyxl.styles import PatternFill
+
 
 DEBUG = True
 
 teams_file = st.file_uploader("upload teams excel file.")
 
-process_button = st.button("process")
+st.info("NOTE: For generating My Teams, the player value should start from A19")
+c1,c2 = st.columns(2)
+with c1:
+    process_button = st.button("process")
+with c2:
+    my_team_formation = st.button("My Team Process")
 
 players_sheet_name  = "PlayersList"
 sheet_to_use = "Copy of Teams"
 teams_list_sheet_name = "TeamsList"
+my_team_sheet_name = "My Teams"
 
 C_COLOR = "FF00FF00"
 VC_COLOR = "FFFFFF00" 
 
 TEAMS = []
+
+
+def generate_my_teams(exel_file):
+    no_team = st.session_state["input_team_generation_count"]
+
+    RED = "FFFF0000"
+    wb = load_workbook(exel_file, read_only=False)
+    sheet_names = wb.sheetnames
+    if my_team_sheet_name in sheet_names:
+        my_team_players = {}
+        my_team_sheet = wb[my_team_sheet_name]
+        gph_idx = f"A19:B40"
+        
+        rnk = 1 
+        top_11_players = []
+        bottom_11_player = []
+        for row in my_team_sheet[gph_idx]:
+            if row[0] is not None:
+                
+                if row[0].font and row[0].font.color:
+                    font_color = row[0].font.color.rgb
+                    if font_color  == RED:
+                        color = "r"
+                    else:
+                        color = "b"
+                else:
+                    color = "b"
+                
+                my_team_players[row[0].value] = {"color": color, "rank" :rnk, "type":  row[1].value}
+
+                if rnk <=11:
+                    top_11_players.append(row[0].value)
+                else:
+                    bottom_11_player.append(row[0].value)
+                rnk = rnk + 1
+
+        #st.write(my_team_players)
+
+
+        my_team = []
+        print(no_team)
+        for team_id in range(no_team):
+            my_team.append(list(top_11_players))
+        
+
+        pvt_point = int(no_team / 2)
+        
+        s_idx, m_idx, l_idx = 0, pvt_point, no_team
+        p_idx = 0
+        for i in range(10,-1, -1):
+            for j in range(s_idx,m_idx):
+                #print(j,i,p_idx)
+                my_team[j][i] = bottom_11_player[p_idx%11]
+                p_idx = p_idx + 1
+
+            if no_team % 2 == 0:
+                if i % 2 == 0:
+                    s_idx = m_idx - 1
+                    m_idx = l_idx
+                else: 
+                    s_idx, m_idx, l_idx = 0, pvt_point, no_team
+            else:
+                if i % 2 == 0:
+                    s_idx = m_idx 
+                    m_idx = l_idx
+                else: 
+                    s_idx, m_idx, l_idx = 0, pvt_point, no_team
+
+        team_count = 1
+        last_col_name = get_column_letter(no_team)
+        write_range = f"A1:{last_col_name}12"
+        min_col, min_row, max_col, max_row = range_boundaries(write_range)
+        
+
+        teams_status = []
+        t_count = 1
+        print(my_team_players)
+        for update_team in my_team:
+            tems_cnt = {"W":0, "Ba": 0, "A": 0, "Bo": 0}
+            for pname in update_team:
+                pyr = my_team_players.get(pname,{})
+                ptype = pyr.get("type","W")
+                if ptype is not None:
+                    tems_cnt[ptype] = tems_cnt[ptype] + 1
+        
+            teams_status.append(tems_cnt)
+            update_team.insert(0,t_count)
+            t_count = t_count + 1
+
+        # print(min_col, min_row, max_col, max_row,len(my_team), len(my_team[0]))
+        for col in range(min_col, max_col + 1):
+            for row in range(min_row, max_row + 1):
+                pname = my_team[col-1][row-1]
+                cell = my_team_sheet.cell(row=row, column=col)
+                
+                if pname in bottom_11_player:
+                    cell.fill = PatternFill(start_color="FBDAD7", fill_type='solid')
+                f_color = my_team_players.get(pname,{}).get("color","b")
+                if f_color == "r":
+                    red_font = Font(color=RED) 
+                    cell.font = red_font
+                
+                cell.value = pname
+            
+        write_range = f"A13:{last_col_name}16"
+        min_col, min_row, max_col, max_row = range_boundaries(write_range)
+        for col in range(min_col, max_col + 1):
+            tm_status = teams_status[col-1]
+            row = 13
+            for k,v in tm_status.items():
+                cell = my_team_sheet.cell(row=row, column=col)
+                cell.value = k + " " + str(v)
+                row = row+ 1
+
+            
+
+        team_output = BytesIO()
+        wb.save(team_output)
+        team_output.seek(0)
+
+        file_name = exel_file.name
+        # Step 4: Create a download button
+        btn = st.download_button(
+            label="Download Excel with My Team Formation",
+            data=team_output,
+            file_name="my_team_updated_"+file_name,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    else:
+        st.warning("My Team input Sheet is missing. Please add and re-run")
 
 def player_credit_from_excel_sheet(sheet):
     players_credits = {}
@@ -280,8 +419,8 @@ if process_button:
                 input_values = {}
                 for name in unique_players_list:
                     input_key = f"input_{i}_{name}"
-                    print(name)
-                    if name != "E":
+                    
+                    if (name != "E" and len(name) > 2):
                         input_values[input_key] = st.text_input(str(i) + "." + name, key=input_key)
                     else:
                         input_values[input_key] = st.text_input(str(i) + "." + name, key=input_key, value= 0)
@@ -296,4 +435,15 @@ if process_button:
 
             
                 
-                    
+if my_team_formation:
+    form = st.form("my_form")
+    with form:
+
+        expected_team_count = st.number_input("Enter no of team required.", min_value=3,
+                                               max_value=5000, 
+                                               step=1,
+                                                 format='%d', key="input_team_generation_count")
+        submit_btn = form.form_submit_button("Generate Team",
+                                              on_click=generate_my_teams,
+                                              args=(teams_file,))
+        
