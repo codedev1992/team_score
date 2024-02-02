@@ -24,8 +24,8 @@ sheet_to_use = "Copy of Teams"
 teams_list_sheet_name = "TeamsList"
 my_team_sheet_name = "My Teams"
 
-C_COLOR = "FF00FF00"
-VC_COLOR = "FFFFFF00" 
+C_COLOR = ["FF00FF00","FF00B050"]
+VC_COLOR = ["FFFFFF00"] 
 
 TEAMS = []
 
@@ -196,10 +196,10 @@ def check_all_team_marked_c_and_vc(sheet):
                 break
             else:
                 clr = cell.fill.start_color.index
-
-                if clr == C_COLOR:
+                #print(col, row, clr,C_COLOR,VC_COLOR)
+                if clr in C_COLOR:
                     _c = True
-                if clr == VC_COLOR:
+                if clr in VC_COLOR:
                     _vc = True
         
         if _c and _vc:
@@ -369,9 +369,9 @@ if process_button:
                 for cell in row:
                     if cell.value is not None:
                         clr = cell.fill.start_color.index
-                        if clr == C_COLOR:
+                        if clr in C_COLOR:
                             r_values.append({cell.value:2})
-                        elif clr == VC_COLOR:
+                        elif clr in VC_COLOR:
                             r_values.append({cell.value:1.5})
                         else:
                             r_values.append({cell.value:1})
@@ -446,4 +446,3 @@ if my_team_formation:
         submit_btn = form.form_submit_button("Generate Team",
                                               on_click=generate_my_teams,
                                               args=(teams_file,))
-        
