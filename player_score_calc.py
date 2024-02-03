@@ -34,6 +34,7 @@ def generate_my_teams(exel_file):
     no_team = st.session_state["input_team_generation_count"]
 
     RED = "FFFF0000"
+    BLACK = 'FF000000'
     wb = load_workbook(exel_file, read_only=False)
     sheet_names = wb.sheetnames
     if my_team_sheet_name in sheet_names:
@@ -135,7 +136,10 @@ def generate_my_teams(exel_file):
                 if f_color == "r":
                     red_font = Font(color=RED) 
                     cell.font = red_font
-                
+                else:
+                    black_font = Font(color=BLACK) 
+                    cell.font = black_font
+
                 cell.value = pname
             
         write_range = f"A13:{last_col_name}16"
