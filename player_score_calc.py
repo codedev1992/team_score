@@ -74,18 +74,24 @@ def generate_my_teams(exel_file):
         
 
         pvt_point = int(no_team / 2)
-        
+
         s_idx, m_idx, l_idx = 0, pvt_point, no_team
-        p_idx = 0
+        p_idx, itr  = 0, 0
+        rest_player_idx_at = no_team if no_team > len(bottom_11_player) else len(bottom_11_player) 
         for i in range(10,-1, -1):
+            is_break = False
             for j in range(s_idx,m_idx):
-                #print(j,i,p_idx)
+                
                 my_team[j][i] = bottom_11_player[p_idx%11]
                 p_idx = p_idx + 1
 
+                if (no_team % 2 == 0 and p_idx % rest_player_idx_at == 0):
+                    itr = itr + 1
+                    p_idx = itr
+                 
             if no_team % 2 == 0:
                 if i % 2 == 0:
-                    s_idx = m_idx - 1
+                    s_idx = m_idx
                     m_idx = l_idx
                 else: 
                     s_idx, m_idx, l_idx = 0, pvt_point, no_team
@@ -104,7 +110,7 @@ def generate_my_teams(exel_file):
 
         teams_status = []
         t_count = 1
-        print(my_team_players)
+        #print(my_team_players)
         for update_team in my_team:
             tems_cnt = {"W":0, "Ba": 0, "A": 0, "Bo": 0}
             for pname in update_team:
@@ -306,7 +312,7 @@ def compute_and_download(excel_data, is_player_sheet_exists):
             
             if teams_sheet["C"+str(idx)].value and teams_sheet["C"+str(idx)].value != "":
                 diff = float(teams_sheet["C"+str(idx)].value) - float(v) 
-                print(teams_sheet["C"+str(idx)].value,v, diff)
+                #print(teams_sheet["C"+str(idx)].value,v, diff)
                 if diff != 0.0 :
                     dif_in_score_teams.append("T"+ str(teams_sheet["A"+str(idx)].value))
             idx = idx + 1
@@ -380,7 +386,7 @@ if process_button:
                 data.append(r_values)
             
             teams_name_idx = f"B1:{last_col_name}1"
-            print("teams : ", teams_name_idx)
+            #print("teams : ", teams_name_idx)
             for row in sheet[teams_name_idx]:
                 for cell in row:
                     TEAMS.append(cell.value)
@@ -446,3 +452,4 @@ if my_team_formation:
         submit_btn = form.form_submit_button("Generate Team",
                                               on_click=generate_my_teams,
                                               args=(teams_file,))
+        
