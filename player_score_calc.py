@@ -372,7 +372,11 @@ def compute_and_download(excel_data, is_player_sheet_exists):
     wb.save(output)
     output.seek(0)
 
-    st.write("Teams with values mismatch between computed and actual : ", dif_in_score_teams)
+    if len(dif_in_score_teams) > 0:
+        team_ids = ",".join(dif_in_score_teams)
+        st.error("Teams with values mismatch between computed and actual : "+team_ids )
+    else:
+        st.success("All values are matching (Both Computed and Actual)")
 
     # Step 4: Create a download button
     btn = st.download_button(
