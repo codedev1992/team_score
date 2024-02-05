@@ -30,6 +30,15 @@ VC_COLOR = ["FFFFFF00"]
 TEAMS = []
 
 
+PLAYER_TYPE_RULES = {
+"W": {"min" : 1, "max": 4},
+"Ba" :{"min" : 3, "max": 6},
+"A": {"min" : 1, "max": 4},
+"Bo": {"min" : 3, "max": 6},
+}
+
+
+
 def generate_my_teams(exel_file):
     no_team = st.session_state["input_team_generation_count"]
 
@@ -154,7 +163,7 @@ def generate_my_teams(exel_file):
 
                 cell.value = pname
             
-        write_range = f"A13:{last_col_name}16"
+        write_range = f"A13:{last_col_name}17"
         min_col, min_row, max_col, max_row = range_boundaries(write_range)
         for col in range(min_col, max_col + 1):
             tm_status = teams_status[col-1]
@@ -164,7 +173,25 @@ def generate_my_teams(exel_file):
                 cell.value = k + " " + str(v)
                 row = row+ 1
 
-            
+            a_count = tm_status.get("A", 0) 
+            w_count =  tm_status.get("W", 0) 
+            ba_count =   tm_status.get("Ba", 0) 
+            bo_count  =  tm_status.get("Bo", 0) 
+
+            if ((PLAYER_TYPE_RULES["A"]["min"] <= a_count  and a_count <= PLAYER_TYPE_RULES["A"]["max"]) and \
+                (PLAYER_TYPE_RULES["W"]["min"] <= w_count  and w_count <= PLAYER_TYPE_RULES["W"]["max"]) and \
+                    (PLAYER_TYPE_RULES["Ba"]["min"] <= ba_count  and ba_count <= PLAYER_TYPE_RULES["Ba"]["max"]) and \
+                        (PLAYER_TYPE_RULES["Bo"]["min"] <= bo_count  and bo_count <= PLAYER_TYPE_RULES["Bo"]["max"])):
+                cell = my_team_sheet.cell(row=17, column=col)
+                cell.value = "Perfect"
+                black_font = Font(color=BLACK) 
+                cell.font = black_font
+            else:
+                cell = my_team_sheet.cell(row=17, column=col)
+                red_font = Font(color=RED) 
+                cell.font = red_font
+                cell.value = "Not Perfect"
+
 
         team_output = BytesIO()
         wb.save(team_output)
@@ -469,3 +496,5 @@ if my_team_formation:
                                               on_click=generate_my_teams,
                                               args=(teams_file,))
         
+
+
