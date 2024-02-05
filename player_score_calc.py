@@ -77,31 +77,43 @@ def generate_my_teams(exel_file):
         pvt_point = int(no_team / 2)
 
         s_idx, m_idx, l_idx = 0, pvt_point, no_team
-        p_idx, itr  = 0, 0
+        p_idx, itr  = 0, 1
         rest_player_idx_at = no_team if no_team > len(bottom_11_player) else len(bottom_11_player) 
         for i in range(10,-1, -1):
-            is_break = False
+
+            if i % 2 == 0:
+                s_idx, m_idx = 0, pvt_point
+            else:
+                s_idx = m_idx
+                m_idx = l_idx
+        
             for j in range(s_idx,m_idx):
                 
                 my_team[j][i] = bottom_11_player[p_idx%11]
                 p_idx = p_idx + 1
+            
+                if itr % rest_player_idx_at == 0:
+                    bottom_11_player = bottom_11_player[1:] + [bottom_11_player[0]]
 
-                if (no_team % 2 == 0 and p_idx % rest_player_idx_at == 0):
-                    itr = itr + 1
-                    p_idx = itr
+                itr = itr + 1
+
+
+                # if (no_team % 2 == 0 and p_idx % rest_player_idx_at == 0):
+                #     itr = itr + 1
+                #     p_idx = itr
                  
-            if no_team % 2 == 0:
-                if i % 2 == 0:
-                    s_idx = m_idx
-                    m_idx = l_idx
-                else: 
-                    s_idx, m_idx, l_idx = 0, pvt_point, no_team
-            else:
-                if i % 2 == 0:
-                    s_idx = m_idx 
-                    m_idx = l_idx
-                else: 
-                    s_idx, m_idx, l_idx = 0, pvt_point, no_team
+            # if no_team % 2 == 0:
+            #     if i % 2 == 0:
+            #         s_idx = m_idx
+            #         m_idx = l_idx
+            #     else: 
+            #         s_idx, m_idx, l_idx = 0, pvt_point, no_team
+            # else:
+            #     if i % 2 == 0:
+            #         s_idx = m_idx 
+            #         m_idx = l_idx
+            #     else: 
+            #         s_idx, m_idx, l_idx = 0, pvt_point, no_team
 
         team_count = 1
         last_col_name = get_column_letter(no_team)
