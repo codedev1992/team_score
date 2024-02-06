@@ -134,12 +134,16 @@ def generate_my_teams(exel_file):
         t_count = 1
         #print(my_team_players)
         for update_team in my_team:
-            tems_cnt = {"W":0, "Ba": 0, "A": 0, "Bo": 0}
+            tems_cnt = {"W":0, "Ba": 0, "A": 0, "Bo": 0,"r":0,"b":0}
             for pname in update_team:
                 pyr = my_team_players.get(pname,{})
                 ptype = pyr.get("type","W")
+                pcolor = pyr.get("color","b")
                 if ptype is not None:
                     tems_cnt[ptype] = tems_cnt[ptype] + 1
+                
+                if pcolor is not None:
+                    tems_cnt[pcolor] = tems_cnt[pcolor] + 1
         
             teams_status.append(tems_cnt)
             update_team.insert(0,t_count)
@@ -163,34 +167,63 @@ def generate_my_teams(exel_file):
 
                 cell.value = pname
             
-        write_range = f"A13:{last_col_name}17"
+        write_range = f"A13:{last_col_name}18"
         min_col, min_row, max_col, max_row = range_boundaries(write_range)
         for col in range(min_col, max_col + 1):
             tm_status = teams_status[col-1]
-            row = 13
-            for k,v in tm_status.items():
-                cell = my_team_sheet.cell(row=row, column=col)
-                cell.value = k + " " + str(v)
-                row = row+ 1
 
             a_count = tm_status.get("A", 0) 
             w_count =  tm_status.get("W", 0) 
             ba_count =   tm_status.get("Ba", 0) 
-            bo_count  =  tm_status.get("Bo", 0) 
+            bo_count  =  tm_status.get("Bo", 0)
 
-            if ((PLAYER_TYPE_RULES["A"]["min"] <= a_count  and a_count <= PLAYER_TYPE_RULES["A"]["max"]) and \
-                (PLAYER_TYPE_RULES["W"]["min"] <= w_count  and w_count <= PLAYER_TYPE_RULES["W"]["max"]) and \
-                    (PLAYER_TYPE_RULES["Ba"]["min"] <= ba_count  and ba_count <= PLAYER_TYPE_RULES["Ba"]["max"]) and \
-                        (PLAYER_TYPE_RULES["Bo"]["min"] <= bo_count  and bo_count <= PLAYER_TYPE_RULES["Bo"]["max"])):
-                cell = my_team_sheet.cell(row=17, column=col)
+            r_colr_count = tm_status.get("r", 0)
+            b_colr_count = tm_status.get("b", 0)
+
+            a_count_str = "A "+ str(a_count)
+            w_count_str = "W "+ str(w_count)
+            ba_count_str = "Ba "+ str(ba_count)
+            bo_count_str = "Bo "+ str(bo_count)
+
+            r_colr_count_str = "Red "+ str(r_colr_count)
+            b_colr_count_str = "Black "+ str(b_colr_count)
+
+            cell = my_team_sheet.cell(row=13, column=col)
+            cell.value = a_count_str + "," + w_count_str
+
+            cell = my_team_sheet.cell(row=14, column=col)
+            cell.value = ba_count_str + "," + bo_count_str
+
+            not_perfects = []
+
+            if not (PLAYER_TYPE_RULES["A"]["min"] <= a_count  and a_count <= PLAYER_TYPE_RULES["A"]["max"]):
+                not_perfects.append(a_count_str) 
+            
+            if not (PLAYER_TYPE_RULES["W"]["min"] <= w_count  and w_count <= PLAYER_TYPE_RULES["W"]["max"]):
+                not_perfects.append(w_count_str) 
+            
+            if not (PLAYER_TYPE_RULES["Ba"]["min"] <= ba_count  and ba_count <= PLAYER_TYPE_RULES["Ba"]["max"]):
+                not_perfects.append(ba_count_str) 
+            
+            if not (PLAYER_TYPE_RULES["Bo"]["min"] <= bo_count  and bo_count <= PLAYER_TYPE_RULES["Bo"]["max"]):
+                not_perfects.append(bo_count_str) 
+                
+            if len(not_perfects) == 0:
+                cell = my_team_sheet.cell(row=15, column=col)
                 cell.value = "Perfect"
                 black_font = Font(color=BLACK) 
                 cell.font = black_font
             else:
-                cell = my_team_sheet.cell(row=17, column=col)
+                cell = my_team_sheet.cell(row=15, column=col)
                 red_font = Font(color=RED) 
                 cell.font = red_font
                 cell.value = "Not Perfect"
+
+                cell = my_team_sheet.cell(row=16, column=col)
+                cell.value = ",".join(not_perfects)
+            
+            cell = my_team_sheet.cell(row=17, column=col)
+            cell.value = r_colr_count_str + "," + b_colr_count_str
 
 
         team_output = BytesIO()
@@ -500,5 +533,12 @@ if my_team_formation:
                                               on_click=generate_my_teams,
                                               args=(teams_file,))
         
+
+            
+
+
+
+
+
 
 
