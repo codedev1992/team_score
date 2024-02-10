@@ -192,6 +192,10 @@ def generate_my_teams(exel_file):
                 for player, types in team_comb_dict.items():
                     team_comb_dict[player] = [lst for lst in types if lst]
         
+        
+        for t in my_team:
+            random.shuffle(t)
+        
         random.shuffle(my_team)
           
         team_count = 1
@@ -747,4 +751,6 @@ if my_team_formation:
         submit_btn = form.form_submit_button("Generate Team",
                                               on_click=generate_my_teams,
                                               args=(teams_file,))
+        
+
         
