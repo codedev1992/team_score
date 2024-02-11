@@ -46,6 +46,33 @@ def plyer_to_type(team,mapping):
     
     return team_type_count
 
+def player_to_color(team,mapping):
+    team_type_count = {"r":0, "b":0}
+
+    for pl in team:
+        team_type_count[mapping[pl].get("color")] = team_type_count[mapping[pl].get("color")] + 1
+    
+    return team_type_count
+
+def can_add_this_player_by_color(team,mapping, new_player):
+    pl_to_clr_map = player_to_color(team,mapping)
+
+    pl_to_clr_map[mapping[new_player].get("color")] = pl_to_clr_map[mapping[new_player].get("color")] + 1
+
+    r_clr, b_clr = pl_to_clr_map.get("r",0), pl_to_clr_map.get("b",0)
+    
+    min_v, max_v = (r_clr, b_clr) if r_clr <= b_clr else (b_clr, r_clr)
+
+    # if (min_v+max_v < 11 and (min_v<=4 or max_v <=7)):
+    #     return True
+    # else:
+    #     return False
+    
+    if (min_v<=4 and max_v <=4):
+        return True
+    else:
+        return False
+
 def get_team_combination(no_team,player_to_type):
 
     output = {
@@ -82,10 +109,9 @@ def get_team_combination(no_team,player_to_type):
     for k,v in diff_weight.items():
         v = diff_weight[k]
         if v > 0:
-            for knam,vidx in diff_weight.items():
-                new_va= p_weights[knam][vidx] - 1
-               
-                p_weights[knam][vidx]  = new_va
+            for i in range(-v,0):
+                new_va = p_weights[k][i] - 1
+                p_weights[k][i]  = new_va
 
     p_weights_to_dict = p_weights
 
@@ -94,6 +120,8 @@ def get_team_combination(no_team,player_to_type):
             output[k].append([player_to_type[k][idx]]*v[idx])
 
     return output
+
+
 
 def generate_my_teams(exel_file):
     no_team = st.session_state["input_team_generation_count"]
@@ -128,7 +156,7 @@ def generate_my_teams(exel_file):
                 else:
                     color = "b"
                 
-                my_team_players[row[0].value] = {"color": color, "rank" :rnk, "type":  row[1].value}
+                my_team_players[row[0].value] = {"color": color, "rank" :rnk, "type":  row[1].value, "weight":0}
 
                 player_to_type[row[1].value].append(row[0].value)
 
@@ -139,6 +167,12 @@ def generate_my_teams(exel_file):
                 rnk = rnk + 1
 
         team_comb_dict = get_team_combination(no_team,player_to_type)
+
+      
+        for k,v in my_team_players.items():
+            idx = player_to_type[my_team_players[k]["type"]].index(k)
+            wgt = len(team_comb_dict[my_team_players[k]["type"]][idx])
+            my_team_players[k]["weight"] = wgt
 
         play_expt_cmb_cnt = {"min":{"W":1,"Ba":3,"Bo":3,"A":1},"max":{"W":2,"Ba":4,"Bo":4,"A":2}}
 
@@ -151,53 +185,44 @@ def generate_my_teams(exel_file):
             team = []
             #print(team_comb_dict)
             for k,cnt in play_expt_cmb_cnt["min"].items():
-                for j in range(cnt):
-                    #print(i,k,team_comb_dict[k])
-                    pname = team_comb_dict[k][j].pop(0)
-                    # for pidx in range(len(team_comb_dict[k])):
-                    #     if len(team_comb_dict[k][pidx]) > 0:
-                            
-                    #         break
-                    team.append(pname)
-            #random.shuffle(team)
+                plr_selection_cnt = cnt if cnt < len(team_comb_dict[k]) else len(team_comb_dict[k])
+                for j in range(plr_selection_cnt):
+                    for pname_in_list in team_comb_dict[k]:
+                        if pname_in_list:
+                            pname = pname_in_list[0]
+                            if (pname not in team and can_add_this_player_by_color(team,my_team_players,pname)):
+                                team.append(pname)
+                                pname_in_list.pop(0)
+                                break
+                    
             my_team.append(team)
-            #random.shuffle(my_team)
-             
 
             for player, types in team_comb_dict.items():
                 team_comb_dict[player] = [lst for lst in types if lst]
 
-            # for k, v in team_comb_dict.items():
-            #     idx_to_pop = []
-            #     for idx in range(len(team_comb_dict[k])):
-            #         if len(team_comb_dict[k][idx]) == 0 :
-            #             print("popped", k, idx)
-            #             idx_to_pop.append(idx)
+        sid, eid= 0, int(no_team / 2)
+        for clr in ["r","b"]:
+            for i in range(sid, eid,1):
+                team = my_team[i]
+                for k,cnt in play_expt_cmb_cnt["max"].items():
+                    if len(team) < 11:
+                        for pname_in_list in team_comb_dict[k]:
+                            if pname_in_list:
+                                if(my_team_players[pname_in_list[0]].get("color") == clr):
+                                    team.append(pname_in_list[0])
+                                    pname_in_list.pop(0)
                 
-            #     for idx in idx_to_pop:
-            #         team_comb_dict[k].pop(idx)
+            sid, eid = eid, no_team
 
-        for i in range(no_team):
-            for p_type in ["Ba","Bo","A","W"]:
-                p_type_cnt = plyer_to_type(my_team[i], my_team_players)
-                for plist in team_comb_dict[p_type]:
-                    if (len(my_team[i]) <11 and 
-                        len(team_comb_dict[p_type]) > 0 and 
-                        p_type_cnt[p_type] < play_expt_cmb_cnt["max"].get(p_type)):
+        my_team_player_count = {}
 
-                        if (plist and plist[0] not in my_team[i]):
-                            my_team[i].append(plist[0])
-                            plist.pop(0)
+        for t_idx in range(len(my_team)):
+            for pname in my_team[t_idx]:
+                if my_team_player_count.get(pname,None):
+                    my_team_player_count[pname] = my_team_player_count[pname] + 1
+                else:
+                    my_team_player_count[pname] = 1
 
-                for player, types in team_comb_dict.items():
-                    team_comb_dict[player] = [lst for lst in types if lst]
-        
-        
-        for t in my_team:
-            random.shuffle(t)
-        
-        random.shuffle(my_team)
-          
         team_count = 1
         last_col_name = get_column_letter(no_team)
         write_range = f"A1:{last_col_name}11"
@@ -219,7 +244,8 @@ def generate_my_teams(exel_file):
                     tems_cnt[pcolor] = tems_cnt[pcolor] + 1
         
             teams_status.append(tems_cnt)
-            update_team.insert(0,t_count)
+            update_team.append(t_count)
+            update_team.append(t_count)
             t_count = t_count + 1
                 
         # print(min_col, min_row, max_col, max_row,len(my_team), len(my_team[0]))
@@ -297,6 +323,67 @@ def generate_my_teams(exel_file):
             
             cell = my_team_sheet.cell(row=17, column=col)
             cell.value = r_colr_count_str + "," + b_colr_count_str
+
+
+
+        #computation 
+        
+        w,ba,bo,a = 2,4,4,2
+
+        w1,ba1,bo1,a1 = len(player_to_type["W"]),len(player_to_type["Ba"]),len(player_to_type["Bo"]),len(player_to_type["A"])
+
+        exp_w, exp_ba, exp_bo, exp_a = w*no_team, ba*no_team, bo*no_team, a*no_team
+
+        wgt_w, wgt_ba,wgt_bo,wgt_a = math.ceil(exp_w/w1),math.ceil(exp_ba/ba1),math.ceil(exp_bo/bo1),math.ceil(exp_a/a1)
+
+        diff_weight = {
+            "W":(wgt_w*w1)-exp_w, 
+            "Ba":(wgt_ba*ba1)-exp_ba,
+            "Bo":(wgt_bo*bo1)-exp_bo,
+            "A":(wgt_a*a1)-exp_a
+        }
+
+        master_compute = []
+        master_compute.append(list(diff_weight.keys()))
+        master_compute.append([w,ba,bo,a])
+        master_compute.append([w1,ba1,bo1,a1])
+        master_compute.append([exp_w, exp_ba, exp_bo, exp_a])
+        master_compute.append([wgt_w, wgt_ba,wgt_bo,wgt_a])
+        master_compute.append(list(diff_weight.values()))
+
+        write_range = f"D19:D40"
+        min_col, min_row, max_col, max_row = range_boundaries(write_range)
+        
+        cell = my_team_sheet["D18"]
+        cell.value = "Computed"
+
+        for col in range(min_col, max_col + 1):
+            for row in range(min_row, max_row + 1):
+                pname = my_team_sheet.cell(row=row, column=1)
+                cell = my_team_sheet.cell(row=row, column=col)
+                cell.value = my_team_players[pname.value].get("weight")
+
+        # cell = my_team_sheet["E18"]
+        # cell.value = "No of Times Players in Team"
+
+        # write_range = f"E19:E40"
+        # min_col, min_row, max_col, max_row = range_boundaries(write_range)
+        # for col in range(min_col, max_col + 1):
+        #     for row in range(min_row, max_row + 1):
+        #         pname = my_team_sheet.cell(row=row, column=1)
+        #         cell = my_team_sheet.cell(row=row, column=col)
+        #         cell.value = my_team_player_count[pname.value]
+
+        write_range = f"G19:J24"
+        min_col, min_row, max_col, max_row = range_boundaries(write_range)
+        v_row, v_col = 0,0
+        for row in range(min_row, max_row + 1):
+            v_col = 0
+            for col in range(min_col, max_col + 1):
+                cell = my_team_sheet.cell(row=row, column=col)
+                cell.value = master_compute[v_row][v_col]
+                v_col = v_col + 1
+            v_row = v_row + 1
 
 
         team_output = BytesIO()
@@ -753,4 +840,11 @@ if my_team_formation:
                                               args=(teams_file,))
         
 
-        
+            
+
+
+
+
+
+
+
