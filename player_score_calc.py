@@ -18,7 +18,13 @@ c1,c2 = st.columns(2)
 with c1:
     process_button = st.button("process")
 with c2:
-    my_team_formation = st.button("My Team Process")
+    ic1,ic2 = st.columns(2)
+    with ic1:
+        use_user_weight = st.checkbox("Use Manual Weight", key="use_manual_weight")
+
+    with ic2: 
+        my_team_formation = st.button("My Team Process")
+ 
 
 players_sheet_name  = "PlayersList"
 sheet_to_use = "Copy of Teams"
@@ -126,6 +132,27 @@ def get_team_combination(no_team,player_to_type):
 def generate_my_teams(exel_file):
     no_team = st.session_state["input_team_generation_count"]
 
+    is_manual_weight = st.session_state["use_manual_weight"]
+
+    player_credit = {}
+    if is_manual_weight:
+        
+        for key in st.session_state:
+        # Check if the key belongs to your input fields
+            if key.startswith("input_myteam_"):
+                # Access the value of each input field
+                value = st.session_state[key]
+                # Process the value as needed
+                pname = re.sub("input_myteam_[\d]+_", "", key)
+
+                #print(pname, value)
+                if value is None or value == "":
+                    player_credit[pname] = 0 
+                else:
+                    player_credit[pname] = eval(value)
+
+    is_weight_inputted = False 
+
     RED = "FFFF0000"
     BLACK = 'FF000000'
     wb = load_workbook(exel_file, read_only=False)
@@ -133,7 +160,7 @@ def generate_my_teams(exel_file):
     if my_team_sheet_name in sheet_names:
         my_team_players = {}
         my_team_sheet = wb[my_team_sheet_name]
-        gph_idx = f"A19:B40"
+        gph_idx = f"A19:C40"
         
         rnk = 1 
         top_11_players = []
@@ -155,7 +182,7 @@ def generate_my_teams(exel_file):
                         color = "b"
                 else:
                     color = "b"
-                
+                                
                 my_team_players[row[0].value] = {"color": color, "rank" :rnk, "type":  row[1].value, "weight":0}
 
                 player_to_type[row[1].value].append(row[0].value)
@@ -166,18 +193,29 @@ def generate_my_teams(exel_file):
                     bottom_11_player.append(row[0].value)
                 rnk = rnk + 1
 
-        team_comb_dict = get_team_combination(no_team,player_to_type)
+        if not is_manual_weight:
+            team_comb_dict = get_team_combination(no_team,player_to_type)
+            for k,v in my_team_players.items():
+                idx = player_to_type[my_team_players[k]["type"]].index(k)
+                wgt = len(team_comb_dict[my_team_players[k]["type"]][idx])
+                my_team_players[k]["weight"] = wgt
+        else:
+            team_comb_dict = {
+                    "W" :[],
+                    "Ba":[],
+                    "Bo":[],
+                    "A":[]
+                }
 
-      
-        for k,v in my_team_players.items():
-            idx = player_to_type[my_team_players[k]["type"]].index(k)
-            wgt = len(team_comb_dict[my_team_players[k]["type"]][idx])
-            my_team_players[k]["weight"] = wgt
+            for pname,prop in my_team_players.items():
+                p_type = prop.get("type")
+                weighted_players = [pname]*player_credit[pname]
+                team_comb_dict[p_type].append(weighted_players)
+                my_team_players[pname]["weight"] = player_credit[pname]
+
+
 
         play_expt_cmb_cnt = {"min":{"W":1,"Ba":3,"Bo":3,"A":1},"max":{"W":2,"Ba":4,"Bo":4,"A":2}}
-
-        for k, v in team_comb_dict.items():
-            print(k,len(v))
 
         my_team = []
 
@@ -223,6 +261,7 @@ def generate_my_teams(exel_file):
                 else:
                     my_team_player_count[pname] = 1
 
+
         team_count = 1
         last_col_name = get_column_letter(no_team)
         write_range = f"A1:{last_col_name}11"
@@ -231,6 +270,9 @@ def generate_my_teams(exel_file):
         teams_status = []
         t_count = 1
         #print(my_team_players)
+        
+        random.shuffle(my_team)
+
         for update_team in my_team:
             tems_cnt = {"W":0, "Ba": 0, "A": 0, "Bo": 0,"r":0,"b":0}
             for pname in update_team:
@@ -398,152 +440,6 @@ def generate_my_teams(exel_file):
             file_name="my_team_updated_"+file_name,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-
-####Depricated
-        # my_team = []
-        # print(no_team)
-        # for team_id in range(no_team):
-        #     my_team.append(list(top_11_players))
-        
-
-        # pvt_point = int(no_team / 2)
-
-        # s_idx, m_idx, l_idx = 0, pvt_point, no_team
-        # p_idx, itr  = 0, 1
-        # rest_player_idx_at = no_team if no_team > len(bottom_11_player) else len(bottom_11_player) 
-        # for i in range(10,-1, -1):
-
-        #     if i % 2 == 0:
-        #         s_idx, m_idx = 0, pvt_point
-        #     else:
-        #         s_idx = m_idx
-        #         m_idx = l_idx
-        
-        #     for j in range(s_idx,m_idx):
-                
-        #         my_team[j][i] = bottom_11_player[p_idx%11]
-        #         p_idx = p_idx + 1
-            
-        #         if itr % rest_player_idx_at == 0:
-        #             bottom_11_player = bottom_11_player[1:] + [bottom_11_player[0]]
-
-        #         itr = itr + 1
-
-        # team_count = 1
-        # last_col_name = get_column_letter(no_team)
-        # write_range = f"A1:{last_col_name}12"
-        # min_col, min_row, max_col, max_row = range_boundaries(write_range)
-        
-
-        # teams_status = []
-        # t_count = 1
-        # #print(my_team_players)
-        # for update_team in my_team:
-        #     tems_cnt = {"W":0, "Ba": 0, "A": 0, "Bo": 0,"r":0,"b":0}
-        #     for pname in update_team:
-        #         pyr = my_team_players.get(pname,{})
-        #         ptype = pyr.get("type","W")
-        #         pcolor = pyr.get("color","b")
-        #         if ptype is not None:
-        #             tems_cnt[ptype] = tems_cnt[ptype] + 1
-                
-        #         if pcolor is not None:
-        #             tems_cnt[pcolor] = tems_cnt[pcolor] + 1
-        
-        #     teams_status.append(tems_cnt)
-        #     update_team.insert(0,t_count)
-        #     t_count = t_count + 1
-                
-        # # print(min_col, min_row, max_col, max_row,len(my_team), len(my_team[0]))
-        # for col in range(min_col, max_col + 1):
-        #     for row in range(min_row, max_row + 1):
-        #         pname = my_team[col-1][row-1]
-        #         cell = my_team_sheet.cell(row=row, column=col)
-                
-        #         if pname in bottom_11_player:
-        #             cell.fill = PatternFill(start_color="FBDAD7", fill_type='solid')
-        #         f_color = my_team_players.get(pname,{}).get("color","b")
-        #         if f_color == "r":
-        #             red_font = Font(color=RED) 
-        #             cell.font = red_font
-        #         else:
-        #             black_font = Font(color=BLACK) 
-        #             cell.font = black_font
-
-        #         cell.value = pname
-            
-        # write_range = f"A13:{last_col_name}18"
-        # min_col, min_row, max_col, max_row = range_boundaries(write_range)
-        # for col in range(min_col, max_col + 1):
-        #     tm_status = teams_status[col-1]
-
-        #     a_count = tm_status.get("A", 0) 
-        #     w_count =  tm_status.get("W", 0) 
-        #     ba_count =   tm_status.get("Ba", 0) 
-        #     bo_count  =  tm_status.get("Bo", 0)
-
-        #     r_colr_count = tm_status.get("r", 0)
-        #     b_colr_count = tm_status.get("b", 0)
-
-        #     a_count_str = "A "+ str(a_count)
-        #     w_count_str = "W "+ str(w_count)
-        #     ba_count_str = "Ba "+ str(ba_count)
-        #     bo_count_str = "Bo "+ str(bo_count)
-
-        #     r_colr_count_str = "Red "+ str(r_colr_count)
-        #     b_colr_count_str = "Black "+ str(b_colr_count)
-
-        #     cell = my_team_sheet.cell(row=13, column=col)
-        #     cell.value = a_count_str + "," + w_count_str
-
-        #     cell = my_team_sheet.cell(row=14, column=col)
-        #     cell.value = ba_count_str + "," + bo_count_str
-
-        #     not_perfects = []
-
-        #     if not (PLAYER_TYPE_RULES["A"]["min"] <= a_count  and a_count <= PLAYER_TYPE_RULES["A"]["max"]):
-        #         not_perfects.append(a_count_str) 
-            
-        #     if not (PLAYER_TYPE_RULES["W"]["min"] <= w_count  and w_count <= PLAYER_TYPE_RULES["W"]["max"]):
-        #         not_perfects.append(w_count_str) 
-            
-        #     if not (PLAYER_TYPE_RULES["Ba"]["min"] <= ba_count  and ba_count <= PLAYER_TYPE_RULES["Ba"]["max"]):
-        #         not_perfects.append(ba_count_str) 
-            
-        #     if not (PLAYER_TYPE_RULES["Bo"]["min"] <= bo_count  and bo_count <= PLAYER_TYPE_RULES["Bo"]["max"]):
-        #         not_perfects.append(bo_count_str) 
-                
-        #     if len(not_perfects) == 0:
-        #         cell = my_team_sheet.cell(row=15, column=col)
-        #         cell.value = "Perfect"
-        #         black_font = Font(color=BLACK) 
-        #         cell.font = black_font
-        #     else:
-        #         cell = my_team_sheet.cell(row=15, column=col)
-        #         red_font = Font(color=RED) 
-        #         cell.font = red_font
-        #         cell.value = "Not Perfect"
-
-        #         cell = my_team_sheet.cell(row=16, column=col)
-        #         cell.value = ",".join(not_perfects)
-            
-        #     cell = my_team_sheet.cell(row=17, column=col)
-        #     cell.value = r_colr_count_str + "," + b_colr_count_str
-
-
-        # team_output = BytesIO()
-        # wb.save(team_output)
-        # team_output.seek(0)
-
-        # file_name = exel_file.name
-        # # Step 4: Create a download button
-        # btn = st.download_button(
-        #     label="Download Excel with My Team Formation",
-        #     data=team_output,
-        #     file_name="my_team_updated_"+file_name,
-        #     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        # )
-#### OLD depricated END
                 
     else:
         st.warning("My Team input Sheet is missing. Please add and re-run")
@@ -835,6 +731,25 @@ if my_team_formation:
                                                max_value=5000, 
                                                step=1,
                                                  format='%d', key="input_team_generation_count")
+        
+        if use_user_weight:
+            wb = load_workbook(teams_file, read_only=True)
+            sheet_names = wb.sheetnames
+        
+            st.header("Player Weight")
+            if my_team_sheet_name in sheet_names:
+                my_team_sheet = wb[my_team_sheet_name]
+                gph_idx = f"A19:C40"
+                
+                i = 0
+                for row in my_team_sheet[gph_idx]:
+                    if row[0] is not None:
+                        name = row[0].value
+                        input_key = f"input_myteam_{i}_{name}"
+                        st.text_input(f"{i}.{name}",key=input_key)
+                        i = i + 1
+
+            wb.close()
         submit_btn = form.form_submit_button("Generate Team",
                                               on_click=generate_my_teams,
                                               args=(teams_file,))
@@ -844,7 +759,152 @@ if my_team_formation:
 
 
 
+##################My TEAM Code###################
+        ####Depricated
+        # my_team = []
+        # print(no_team)
+        # for team_id in range(no_team):
+        #     my_team.append(list(top_11_players))
+        
 
+        # pvt_point = int(no_team / 2)
+
+        # s_idx, m_idx, l_idx = 0, pvt_point, no_team
+        # p_idx, itr  = 0, 1
+        # rest_player_idx_at = no_team if no_team > len(bottom_11_player) else len(bottom_11_player) 
+        # for i in range(10,-1, -1):
+
+        #     if i % 2 == 0:
+        #         s_idx, m_idx = 0, pvt_point
+        #     else:
+        #         s_idx = m_idx
+        #         m_idx = l_idx
+        
+        #     for j in range(s_idx,m_idx):
+                
+        #         my_team[j][i] = bottom_11_player[p_idx%11]
+        #         p_idx = p_idx + 1
+            
+        #         if itr % rest_player_idx_at == 0:
+        #             bottom_11_player = bottom_11_player[1:] + [bottom_11_player[0]]
+
+        #         itr = itr + 1
+
+        # team_count = 1
+        # last_col_name = get_column_letter(no_team)
+        # write_range = f"A1:{last_col_name}12"
+        # min_col, min_row, max_col, max_row = range_boundaries(write_range)
+        
+
+        # teams_status = []
+        # t_count = 1
+        # #print(my_team_players)
+        # for update_team in my_team:
+        #     tems_cnt = {"W":0, "Ba": 0, "A": 0, "Bo": 0,"r":0,"b":0}
+        #     for pname in update_team:
+        #         pyr = my_team_players.get(pname,{})
+        #         ptype = pyr.get("type","W")
+        #         pcolor = pyr.get("color","b")
+        #         if ptype is not None:
+        #             tems_cnt[ptype] = tems_cnt[ptype] + 1
+                
+        #         if pcolor is not None:
+        #             tems_cnt[pcolor] = tems_cnt[pcolor] + 1
+        
+        #     teams_status.append(tems_cnt)
+        #     update_team.insert(0,t_count)
+        #     t_count = t_count + 1
+                
+        # # print(min_col, min_row, max_col, max_row,len(my_team), len(my_team[0]))
+        # for col in range(min_col, max_col + 1):
+        #     for row in range(min_row, max_row + 1):
+        #         pname = my_team[col-1][row-1]
+        #         cell = my_team_sheet.cell(row=row, column=col)
+                
+        #         if pname in bottom_11_player:
+        #             cell.fill = PatternFill(start_color="FBDAD7", fill_type='solid')
+        #         f_color = my_team_players.get(pname,{}).get("color","b")
+        #         if f_color == "r":
+        #             red_font = Font(color=RED) 
+        #             cell.font = red_font
+        #         else:
+        #             black_font = Font(color=BLACK) 
+        #             cell.font = black_font
+
+        #         cell.value = pname
+            
+        # write_range = f"A13:{last_col_name}18"
+        # min_col, min_row, max_col, max_row = range_boundaries(write_range)
+        # for col in range(min_col, max_col + 1):
+        #     tm_status = teams_status[col-1]
+
+        #     a_count = tm_status.get("A", 0) 
+        #     w_count =  tm_status.get("W", 0) 
+        #     ba_count =   tm_status.get("Ba", 0) 
+        #     bo_count  =  tm_status.get("Bo", 0)
+
+        #     r_colr_count = tm_status.get("r", 0)
+        #     b_colr_count = tm_status.get("b", 0)
+
+        #     a_count_str = "A "+ str(a_count)
+        #     w_count_str = "W "+ str(w_count)
+        #     ba_count_str = "Ba "+ str(ba_count)
+        #     bo_count_str = "Bo "+ str(bo_count)
+
+        #     r_colr_count_str = "Red "+ str(r_colr_count)
+        #     b_colr_count_str = "Black "+ str(b_colr_count)
+
+        #     cell = my_team_sheet.cell(row=13, column=col)
+        #     cell.value = a_count_str + "," + w_count_str
+
+        #     cell = my_team_sheet.cell(row=14, column=col)
+        #     cell.value = ba_count_str + "," + bo_count_str
+
+        #     not_perfects = []
+
+        #     if not (PLAYER_TYPE_RULES["A"]["min"] <= a_count  and a_count <= PLAYER_TYPE_RULES["A"]["max"]):
+        #         not_perfects.append(a_count_str) 
+            
+        #     if not (PLAYER_TYPE_RULES["W"]["min"] <= w_count  and w_count <= PLAYER_TYPE_RULES["W"]["max"]):
+        #         not_perfects.append(w_count_str) 
+            
+        #     if not (PLAYER_TYPE_RULES["Ba"]["min"] <= ba_count  and ba_count <= PLAYER_TYPE_RULES["Ba"]["max"]):
+        #         not_perfects.append(ba_count_str) 
+            
+        #     if not (PLAYER_TYPE_RULES["Bo"]["min"] <= bo_count  and bo_count <= PLAYER_TYPE_RULES["Bo"]["max"]):
+        #         not_perfects.append(bo_count_str) 
+                
+        #     if len(not_perfects) == 0:
+        #         cell = my_team_sheet.cell(row=15, column=col)
+        #         cell.value = "Perfect"
+        #         black_font = Font(color=BLACK) 
+        #         cell.font = black_font
+        #     else:
+        #         cell = my_team_sheet.cell(row=15, column=col)
+        #         red_font = Font(color=RED) 
+        #         cell.font = red_font
+        #         cell.value = "Not Perfect"
+
+        #         cell = my_team_sheet.cell(row=16, column=col)
+        #         cell.value = ",".join(not_perfects)
+            
+        #     cell = my_team_sheet.cell(row=17, column=col)
+        #     cell.value = r_colr_count_str + "," + b_colr_count_str
+
+
+        # team_output = BytesIO()
+        # wb.save(team_output)
+        # team_output.seek(0)
+
+        # file_name = exel_file.name
+        # # Step 4: Create a download button
+        # btn = st.download_button(
+        #     label="Download Excel with My Team Formation",
+        #     data=team_output,
+        #     file_name="my_team_updated_"+file_name,
+        #     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        # )
+#### OLD depricated END
 
 
 
