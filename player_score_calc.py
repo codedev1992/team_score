@@ -9,7 +9,7 @@ from openpyxl.styles import PatternFill
 import math
 import random
 
-DEBUG = True
+DEBUG = False
 
 teams_file = st.file_uploader("upload teams excel file.")
 
@@ -70,11 +70,12 @@ def check_and_replace_players(my_team_players,my_team,team_comb_dict,min_max_rul
 
     for idx,team in enumerate(my_team):
         if len(team) < 11:
+            print(idx)
             no_plyr_required = 11 - len(team)
             team_status = all_team_current_status[idx]
 
             clr_to_replace = 'b' if team_status['b'] > team_status['r'] else 'r'
-
+            print(team_comb_dict)
             for pcat,pname_list in team_comb_dict.items():
                 if no_plyr_required > 0:
                     if min_max_rules["max"][pcat] > team_status[pcat]:
@@ -91,6 +92,7 @@ def check_and_replace_players(my_team_players,my_team,team_comb_dict,min_max_rul
                                                         idx_of_plr_to_be_replaced = mt.index(pname)
                                                         mt[idx_of_plr_to_be_replaced] = pyrs_list[0] 
                                                         team.append(pname)
+                                                        
                                                         suitable_players_to_replace.append(pname)
                                                         no_plyr_required = no_plyr_required - 1
                                                         break
@@ -297,7 +299,7 @@ def generate_my_teams(exel_file):
                 team_comb_dict[player] = [lst for lst in types if lst]
 
         sid, eid= 0, int(no_team / 2)
-        for clr in ["r","b"]:
+        for clr in ["b","r"]:
             for i in range(sid, eid,1):
                 team = my_team[i]
                 for k,cnt in play_expt_cmb_cnt["max"].items():
@@ -322,7 +324,7 @@ def generate_my_teams(exel_file):
         #     print(team_comb_dict)
 
 
-        random.shuffle(my_team)
+        #random.shuffle(my_team)
 
         check_and_replace_players(my_team_players,my_team,team_comb_dict,play_expt_cmb_cnt)
 
