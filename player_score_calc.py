@@ -392,8 +392,8 @@ def generate_my_teams(exel_file):
             ba_count_str = "Ba "+ str(ba_count)
             bo_count_str = "Bo "+ str(bo_count)
 
-            r_colr_count_str = "Red "+ str(r_colr_count)
-            b_colr_count_str = "Black "+ str(b_colr_count)
+            r_colr_count_str = "R "+ str(r_colr_count)
+            b_colr_count_str = "B "+ str(b_colr_count)
 
             cell = my_team_sheet.cell(row=13, column=col)
             cell.value = a_count_str + "," + w_count_str
@@ -416,23 +416,25 @@ def generate_my_teams(exel_file):
                 not_perfects.append(bo_count_str) 
             
             p_cnt = a_count + w_count + ba_count + bo_count
+            
+            cell = my_team_sheet.cell(row=15, column=col)
+            cell.value = r_colr_count_str + "," + b_colr_count_str
 
             if p_cnt== 11 and len(not_perfects) == 0:
-                cell = my_team_sheet.cell(row=15, column=col)
+                cell = my_team_sheet.cell(row=16, column=col)
                 cell.value = "Perfect"
                 black_font = Font(color=BLACK) 
                 cell.font = black_font
             else:
-                cell = my_team_sheet.cell(row=15, column=col)
+                cell = my_team_sheet.cell(row=17, column=col)
                 red_font = Font(color=RED) 
                 cell.font = red_font
                 cell.value = "Not Perfect"
 
-                cell = my_team_sheet.cell(row=16, column=col)
+                cell = my_team_sheet.cell(row=18, column=col)
                 cell.value = ",".join(not_perfects)
             
-            cell = my_team_sheet.cell(row=17, column=col)
-            cell.value = r_colr_count_str + "," + b_colr_count_str
+
 
 
 
