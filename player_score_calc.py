@@ -79,7 +79,7 @@ def can_add_this_player_by_color(team,mapping, new_player):
     else:
         return False
 
-def get_team_combination(no_team,player_to_type):
+def get_team_combination(no_team,player_to_type,player_weights):
 
     output = {
         "W" :[],
@@ -123,11 +123,16 @@ def get_team_combination(no_team,player_to_type):
 
     for k,v in p_weights_to_dict.items():
         for idx in range(len(v)):
-            output[k].append([player_to_type[k][idx]]*v[idx])
+            pname = player_to_type[k][idx]
+            if (player_weights.get(pname,None) is None or player_weights.get(pname) == -1):
+                output[k].append([player_to_type[k][idx]]*v[idx])
+            else: 
+                output[k].append([player_to_type[k][idx]]*player_weights[pname])
+
+    if DEBUG:
+        print(output)
 
     return output
-
-
 
 def generate_my_teams(exel_file):
     no_team = st.session_state["input_team_generation_count"]
@@ -147,7 +152,7 @@ def generate_my_teams(exel_file):
 
                 #print(pname, value)
                 if value is None or value == "":
-                    player_credit[pname] = 0 
+                    player_credit[pname] = -1
                 else:
                     player_credit[pname] = eval(value)
 
@@ -193,25 +198,25 @@ def generate_my_teams(exel_file):
                     bottom_11_player.append(row[0].value)
                 rnk = rnk + 1
 
-        if not is_manual_weight:
-            team_comb_dict = get_team_combination(no_team,player_to_type)
-            for k,v in my_team_players.items():
-                idx = player_to_type[my_team_players[k]["type"]].index(k)
-                wgt = len(team_comb_dict[my_team_players[k]["type"]][idx])
-                my_team_players[k]["weight"] = wgt
-        else:
-            team_comb_dict = {
-                    "W" :[],
-                    "Ba":[],
-                    "Bo":[],
-                    "A":[]
-                }
+        # if not is_manual_weight:
+        team_comb_dict = get_team_combination(no_team,player_to_type, player_credit)
+        for k,v in my_team_players.items():
+            idx = player_to_type[my_team_players[k]["type"]].index(k)
+            wgt = len(team_comb_dict[my_team_players[k]["type"]][idx])
+            my_team_players[k]["weight"] = wgt
+        # else:
+        #     team_comb_dict = {
+        #             "W" :[],
+        #             "Ba":[],
+        #             "Bo":[],
+        #             "A":[]
+        #         }
 
-            for pname,prop in my_team_players.items():
-                p_type = prop.get("type")
-                weighted_players = [pname]*player_credit[pname]
-                team_comb_dict[p_type].append(weighted_players)
-                my_team_players[pname]["weight"] = player_credit[pname]
+        #     for pname,prop in my_team_players.items():
+        #         p_type = prop.get("type")
+        #         weighted_players = [pname]*player_credit[pname]
+        #         team_comb_dict[p_type].append(weighted_players)
+        #         my_team_players[pname]["weight"] = player_credit[pname]
 
 
 
@@ -243,12 +248,12 @@ def generate_my_teams(exel_file):
             for i in range(sid, eid,1):
                 team = my_team[i]
                 for k,cnt in play_expt_cmb_cnt["max"].items():
-                    if len(team) < 11:
-                        for pname_in_list in team_comb_dict[k]:
-                            if pname_in_list:
-                                if(my_team_players[pname_in_list[0]].get("color") == clr):
-                                    team.append(pname_in_list[0])
-                                    pname_in_list.pop(0)
+                    for pname_in_list in team_comb_dict[k]:
+                        if (len(team) < 11 and 
+                            pname_in_list and 
+                            my_team_players[pname_in_list[0]].get("color") == clr):
+                                team.append(pname_in_list[0])
+                                pname_in_list.pop(0)
                 
             sid, eid = eid, no_team
 
@@ -291,11 +296,15 @@ def generate_my_teams(exel_file):
             t_count = t_count + 1
                 
         # print(min_col, min_row, max_col, max_row,len(my_team), len(my_team[0]))
+        
         for col in range(min_col, max_col + 1):
+            max_pname_len = 0
             for row in range(min_row, max_row + 1):
                 pname = my_team[col-1][row-1]
                 cell = my_team_sheet.cell(row=row, column=col)
-                
+                if len(str(pname)) > max_pname_len:
+                    max_pname_len = len(str(pname))
+
                 if pname in bottom_11_player:
                     cell.fill = PatternFill(start_color="FBDAD7", fill_type='solid')
                 f_color = my_team_players.get(pname,{}).get("color","b")
@@ -307,6 +316,10 @@ def generate_my_teams(exel_file):
                     cell.font = black_font
 
                 cell.value = pname
+            
+            col_letter = get_column_letter(col)
+            my_team_sheet.column_dimensions[col_letter].width = max_pname_len
+        
         
         write_range = f"A13:{last_col_name}18"
         min_col, min_row, max_col, max_row = range_boundaries(write_range)
@@ -348,8 +361,10 @@ def generate_my_teams(exel_file):
             
             if not (PLAYER_TYPE_RULES["Bo"]["min"] <= bo_count  and bo_count <= PLAYER_TYPE_RULES["Bo"]["max"]):
                 not_perfects.append(bo_count_str) 
-                
-            if len(not_perfects) == 0:
+            
+            p_cnt = a_count + w_count + ba_count + bo_count
+
+            if p_cnt== 11 and len(not_perfects) == 0:
                 cell = my_team_sheet.cell(row=15, column=col)
                 cell.value = "Perfect"
                 black_font = Font(color=BLACK) 
@@ -906,5 +921,52 @@ if my_team_formation:
         # )
 #### OLD depricated END
 
+#### Depricated 
+        
+    #     def get_team_combination(no_team,player_to_type):
 
+    # output = {
+    #     "W" :[],
+    #     "Ba":[],
+    #     "Bo":[],
+    #     "A":[]
+    # }
 
+    # total_possible_players = no_team * 12 
+    # w,ba,bo,a = 2,4,4,2
+
+    # w1,ba1,bo1,a1 = len(player_to_type["W"]),len(player_to_type["Ba"]),len(player_to_type["Bo"]),len(player_to_type["A"])
+
+    # exp_w, exp_ba, exp_bo, exp_a = w*no_team, ba*no_team, bo*no_team, a*no_team
+
+    # wgt_w, wgt_ba,wgt_bo,wgt_a = math.ceil(exp_w/w1),math.ceil(exp_ba/ba1),math.ceil(exp_bo/bo1),math.ceil(exp_a/a1)
+
+    # diff_weight = {
+    #     "W":(wgt_w*w1)-exp_w, 
+    #     "Ba":(wgt_ba*ba1)-exp_ba,
+    #     "Bo":(wgt_bo*bo1)-exp_bo,
+    #     "A":(wgt_a*a1)-exp_a
+    # }
+
+    # p_weights = {
+    #     "W":[wgt_w]*w1,
+    #     "Ba":[wgt_ba]*ba1,
+    #     "Bo":[wgt_bo]*bo1,
+    #     "A":[wgt_a]*a1
+    # }
+
+     
+    # for k,v in diff_weight.items():
+    #     v = diff_weight[k]
+    #     if v > 0:
+    #         for i in range(-v,0):
+    #             new_va = p_weights[k][i] - 1
+    #             p_weights[k][i]  = new_va
+
+    # p_weights_to_dict = p_weights
+
+    # for k,v in p_weights_to_dict.items():
+    #     for idx in range(len(v)):
+    #         output[k].append([player_to_type[k][idx]]*v[idx])
+
+    # return output
