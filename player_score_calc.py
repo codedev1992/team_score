@@ -70,12 +70,12 @@ def check_and_replace_players(my_team_players,my_team,team_comb_dict,min_max_rul
 
     for idx,team in enumerate(my_team):
         if len(team) < 11:
-            print(idx)
+            # print(idx)
             no_plyr_required = 11 - len(team)
             team_status = all_team_current_status[idx]
 
             clr_to_replace = 'b' if team_status['b'] > team_status['r'] else 'r'
-            print(team_comb_dict)
+            # print(team_comb_dict)
             for pcat,pname_list in team_comb_dict.items():
                 if no_plyr_required > 0:
                     if min_max_rules["max"][pcat] > team_status[pcat]:
@@ -92,7 +92,7 @@ def check_and_replace_players(my_team_players,my_team,team_comb_dict,min_max_rul
                                                         idx_of_plr_to_be_replaced = mt.index(pname)
                                                         mt[idx_of_plr_to_be_replaced] = pyrs_list[0] 
                                                         team.append(pname)
-                                                        
+                                                        # print(pname, pyrs_list[0])
                                                         suitable_players_to_replace.append(pname)
                                                         no_plyr_required = no_plyr_required - 1
                                                         break
@@ -297,26 +297,42 @@ def generate_my_teams(exel_file):
 
             for player, types in team_comb_dict.items():
                 team_comb_dict[player] = [lst for lst in types if lst]
+        
 
-        sid, eid= 0, int(no_team / 2)
-        for clr in ["b","r"]:
-            for i in range(sid, eid,1):
-                team = my_team[i]
-                for k,cnt in play_expt_cmb_cnt["max"].items():
-                    for pname_in_list in team_comb_dict[k]:
-                        if pname_in_list:
-                            pname = pname_in_list[0]
-                            if (len(team) < 11 and 
-                                pname not in team and 
-                                my_team_players[pname].get("color") == clr):
-                                    team.append(pname)
-                                    if my_team_player_count.get(pname, None) == None:
-                                        my_team_player_count[pname] = 1
-                                    else: 
-                                        my_team_player_count[pname] = my_team_player_count[pname] + 1
-                                    pname_in_list.pop(0)
+        for i in range(no_team):
+            team = my_team[i]
+            for k,cnt in play_expt_cmb_cnt["max"].items():
+                for pname_in_list in team_comb_dict[k]:
+                    if pname_in_list:
+                        pname = pname_in_list[0]
+                        if (len(team) < 11 and pname not in team):
+                            team.append(pname)
+                            if my_team_player_count.get(pname, None) == None:
+                                my_team_player_count[pname] = 1
+                            else: 
+                                my_team_player_count[pname] = my_team_player_count[pname] + 1
+                            pname_in_list.pop(0)
+
+
+        # sid, eid= 0, int(no_team / 2)
+        # for clr in ["b","r"]:
+        #     for i in range(sid, eid,1):
+        #         team = my_team[i]
+        #         for k,cnt in play_expt_cmb_cnt["max"].items():
+        #             for pname_in_list in team_comb_dict[k]:
+        #                 if pname_in_list:
+        #                     pname = pname_in_list[0]
+        #                     if (len(team) < 11 and 
+        #                         pname not in team and 
+        #                         my_team_players[pname].get("color") == clr):
+        #                             team.append(pname)
+        #                             if my_team_player_count.get(pname, None) == None:
+        #                                 my_team_player_count[pname] = 1
+        #                             else: 
+        #                                 my_team_player_count[pname] = my_team_player_count[pname] + 1
+        #                             pname_in_list.pop(0)
                 
-            sid, eid = eid, no_team
+        #     sid, eid = eid, no_team
 
         # if DEBUG:
         #     for i in range(len(my_team)):
@@ -324,7 +340,10 @@ def generate_my_teams(exel_file):
         #     print(team_comb_dict)
 
 
-        #random.shuffle(my_team)
+        random.shuffle(my_team)
+
+        for t in my_team:
+            random.shuffle(t)
 
         check_and_replace_players(my_team_players,my_team,team_comb_dict,play_expt_cmb_cnt)
 
@@ -346,16 +365,28 @@ def generate_my_teams(exel_file):
             update_team.append(t_count)
             update_team.append(t_count)
             t_count = t_count + 1
-                
+        
+        
         team_count = 1
         last_col_name = get_column_letter(no_team)
-        write_range = f"A1:{last_col_name}11"
+
+        team_number_range = f"A1:{last_col_name}1"
+        min_col, min_row, max_col, max_row = range_boundaries(team_number_range)
+        team_idx = 1
+        for col in range(min_col, max_col + 1):
+            for row in range(min_row, max_row + 1):
+                cell = my_team_sheet.cell(row=row, column=col)
+                cell.value = team_idx
+            team_idx = team_idx + 1
+
+
+        write_range = f"A2:{last_col_name}12"
         min_col, min_row, max_col, max_row = range_boundaries(write_range)
-        
+        print(min_col, min_row, max_col, max_row)
         for col in range(min_col, max_col + 1):
             max_pname_len = 0
             for row in range(min_row, max_row + 1):
-                pname = my_team[col-1][row-1]
+                pname = my_team[col-1][row-2]
                 cell = my_team_sheet.cell(row=row, column=col)
                 if len(str(pname)) > max_pname_len:
                     max_pname_len = len(str(pname))
@@ -436,10 +467,6 @@ def generate_my_teams(exel_file):
                 cell = my_team_sheet.cell(row=18, column=col)
                 cell.value = ",".join(not_perfects)
             
-
-
-
-
         #computation 
         
         w,ba,bo,a = 2,4,4,2
@@ -476,17 +503,6 @@ def generate_my_teams(exel_file):
                 pname = my_team_sheet.cell(row=row, column=1)
                 cell = my_team_sheet.cell(row=row, column=col)
                 cell.value = my_team_players[pname.value].get("weight")
-
-        # cell = my_team_sheet["E18"]
-        # cell.value = "No of Times Players in Team"
-
-        # write_range = f"E19:E40"
-        # min_col, min_row, max_col, max_row = range_boundaries(write_range)
-        # for col in range(min_col, max_col + 1):
-        #     for row in range(min_row, max_row + 1):
-        #         pname = my_team_sheet.cell(row=row, column=1)
-        #         cell = my_team_sheet.cell(row=row, column=col)
-        #         cell.value = my_team_player_count[pname.value]
 
         write_range = f"G19:J24"
         min_col, min_row, max_col, max_row = range_boundaries(write_range)
