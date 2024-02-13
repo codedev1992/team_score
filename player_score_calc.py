@@ -44,6 +44,67 @@ PLAYER_TYPE_RULES = {
 "Bo": {"min" : 3, "max": 6},
 }
 
+
+def get_team_status(my_team_players,my_team):
+    teams_status = []
+ 
+    for update_team in my_team:
+        tems_cnt = {"W":0, "Ba": 0, "A": 0, "Bo": 0,"r":0,"b":0}
+        for pname in update_team:
+            pyr = my_team_players.get(pname,{})
+            ptype = pyr.get("type","W")
+            pcolor = pyr.get("color","b")
+            if ptype is not None:
+                tems_cnt[ptype] = tems_cnt[ptype] + 1
+            
+            if pcolor is not None:
+                tems_cnt[pcolor] = tems_cnt[pcolor] + 1
+    
+        teams_status.append(tems_cnt)
+    
+    return teams_status
+ 
+
+def check_and_replace_players(my_team_players,my_team,team_comb_dict,min_max_rules):
+    all_team_current_status = get_team_status(my_team_players,my_team)
+
+    for idx,team in enumerate(my_team):
+        if len(team) < 11:
+            no_plyr_required = 11 - len(team)
+            team_status = all_team_current_status[idx]
+
+            clr_to_replace = 'b' if team_status['b'] > team_status['r'] else 'r'
+
+            for pcat,pname_list in team_comb_dict.items():
+                if no_plyr_required > 0:
+                    if min_max_rules["max"][pcat] > team_status[pcat]:
+                        if len(team_comb_dict[pcat]) > 0:
+                            for pyrs_list in pname_list:
+                                if pyrs_list:
+                                    if my_team_players[pyrs_list[0]].get("color") == clr_to_replace:
+                                        suitable_players_to_replace = []
+                                        for pname,prop in  my_team_players.items():
+                                            if prop["color"] == clr_to_replace and prop["type"] == pcat and pyrs_list[0] != pname:
+                                                
+                                                for mt in my_team:
+                                                    if pname in mt and pyrs_list[0] not in mt:
+                                                        idx_of_plr_to_be_replaced = mt.index(pname)
+                                                        mt[idx_of_plr_to_be_replaced] = pyrs_list[0] 
+                                                        team.append(pname)
+                                                        suitable_players_to_replace.append(pname)
+                                                        no_plyr_required = no_plyr_required - 1
+                                                        break
+                                            
+                                            if len(team) == 11:
+                                                break
+
+                                    if len(team) == 11:
+                                        break
+                if len(team) == 11:
+                    break
+                                            
+
+                            
 def plyer_to_type(team,mapping):
     team_type_count = {"W":0, "Ba":0, "Bo": 0, "A":0}
 
@@ -129,8 +190,8 @@ def get_team_combination(no_team,player_to_type,player_weights):
             else: 
                 output[k].append([player_to_type[k][idx]]*player_weights[pname])
 
-    if DEBUG:
-        print(output)
+    # if DEBUG:
+    #     print(output)
 
     return output
 
@@ -204,26 +265,13 @@ def generate_my_teams(exel_file):
             idx = player_to_type[my_team_players[k]["type"]].index(k)
             wgt = len(team_comb_dict[my_team_players[k]["type"]][idx])
             my_team_players[k]["weight"] = wgt
-        # else:
-        #     team_comb_dict = {
-        #             "W" :[],
-        #             "Ba":[],
-        #             "Bo":[],
-        #             "A":[]
-        #         }
 
-        #     for pname,prop in my_team_players.items():
-        #         p_type = prop.get("type")
-        #         weighted_players = [pname]*player_credit[pname]
-        #         team_comb_dict[p_type].append(weighted_players)
-        #         my_team_players[pname]["weight"] = player_credit[pname]
-
-
-
-        play_expt_cmb_cnt = {"min":{"W":1,"Ba":3,"Bo":3,"A":1},"max":{"W":2,"Ba":4,"Bo":4,"A":2}}
+        #{"W":6,"Ba":4,"Bo":4,"A":2}
+        play_expt_cmb_cnt = {"min":{"W":1,"Ba":3,"Bo":3,"A":1},"max":{"W":4,"Ba":6,"Bo":6,"A":4}}
 
         my_team = []
-
+        my_team_player_count = {}
+        
         for i in range(no_team):
             team = []
             #print(team_comb_dict)
@@ -235,6 +283,11 @@ def generate_my_teams(exel_file):
                             pname = pname_in_list[0]
                             if (pname not in team and can_add_this_player_by_color(team,my_team_players,pname)):
                                 team.append(pname)
+                                if my_team_player_count.get(pname, None) == None:
+                                    my_team_player_count[pname] = 1
+                                else: 
+                                    my_team_player_count[pname] = my_team_player_count[pname] + 1
+
                                 pname_in_list.pop(0)
                                 break
                     
@@ -249,35 +302,32 @@ def generate_my_teams(exel_file):
                 team = my_team[i]
                 for k,cnt in play_expt_cmb_cnt["max"].items():
                     for pname_in_list in team_comb_dict[k]:
-                        if (len(team) < 11 and 
-                            pname_in_list and 
-                            my_team_players[pname_in_list[0]].get("color") == clr):
-                                team.append(pname_in_list[0])
-                                pname_in_list.pop(0)
+                        if pname_in_list:
+                            pname = pname_in_list[0]
+                            if (len(team) < 11 and 
+                                pname not in team and 
+                                my_team_players[pname].get("color") == clr):
+                                    team.append(pname)
+                                    if my_team_player_count.get(pname, None) == None:
+                                        my_team_player_count[pname] = 1
+                                    else: 
+                                        my_team_player_count[pname] = my_team_player_count[pname] + 1
+                                    pname_in_list.pop(0)
                 
             sid, eid = eid, no_team
 
-        my_team_player_count = {}
-
-        for t_idx in range(len(my_team)):
-            for pname in my_team[t_idx]:
-                if my_team_player_count.get(pname,None):
-                    my_team_player_count[pname] = my_team_player_count[pname] + 1
-                else:
-                    my_team_player_count[pname] = 1
+        # if DEBUG:
+        #     for i in range(len(my_team)):
+        #         print(i, len(my_team[i]))
+        #     print(team_comb_dict)
 
 
-        team_count = 1
-        last_col_name = get_column_letter(no_team)
-        write_range = f"A1:{last_col_name}11"
-        min_col, min_row, max_col, max_row = range_boundaries(write_range)
-                    
-        teams_status = []
-        t_count = 1
-        #print(my_team_players)
-        
         random.shuffle(my_team)
 
+        check_and_replace_players(my_team_players,my_team,team_comb_dict,play_expt_cmb_cnt)
+
+        teams_status = []
+        t_count = 1
         for update_team in my_team:
             tems_cnt = {"W":0, "Ba": 0, "A": 0, "Bo": 0,"r":0,"b":0}
             for pname in update_team:
@@ -295,7 +345,10 @@ def generate_my_teams(exel_file):
             update_team.append(t_count)
             t_count = t_count + 1
                 
-        # print(min_col, min_row, max_col, max_row,len(my_team), len(my_team[0]))
+        team_count = 1
+        last_col_name = get_column_letter(no_team)
+        write_range = f"A1:{last_col_name}11"
+        min_col, min_row, max_col, max_row = range_boundaries(write_range)
         
         for col in range(min_col, max_col + 1):
             max_pname_len = 0
