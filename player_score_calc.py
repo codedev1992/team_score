@@ -9,7 +9,7 @@ from openpyxl.styles import PatternFill
 import math
 import random
 
-DEBUG = False
+DEBUG = True
 
 teams_file = st.file_uploader("upload teams excel file.")
 
@@ -33,7 +33,8 @@ my_team_sheet_name = "My Teams"
 
 C_COLOR = ["FF00FF00","FF00B050"]
 VC_COLOR = ["FFFFFF00"] 
-
+RED = "FFFF0000"
+BLACK = 'FF000000'
 TEAMS = []
 
 
@@ -137,8 +138,17 @@ def can_add_this_player_by_color(team,mapping, new_player):
     # else:
     #     return False
     
-    if (min_v<=4 and max_v <=4):
-        return True
+    # min_v + max_v <=11 
+    # min_v <=7 and max_v <=7
+    # max_v <=7 
+
+    # if (min_v<=4 and max_v <=4):
+    #     return True
+    # else:
+    #     return False
+
+    if ((min_v + max_v) <= 11 and max_v <=7):
+        return True 
     else:
         return False
 
@@ -197,7 +207,7 @@ def get_team_combination(no_team,player_to_type,player_weights):
 
     return output
 
-def generate_my_teams(exel_file):
+def generate_my_teams(master_wb, file_name):
     no_team = st.session_state["input_team_generation_count"]
 
     is_manual_weight = st.session_state["use_manual_weight"]
@@ -221,9 +231,8 @@ def generate_my_teams(exel_file):
 
     is_weight_inputted = False 
 
-    RED = "FFFF0000"
-    BLACK = 'FF000000'
-    wb = load_workbook(exel_file, read_only=False)
+
+    wb = master_wb #load_workbook(exel_file, read_only=False)
     sheet_names = wb.sheetnames
     if my_team_sheet_name in sheet_names:
         my_team_players = {}
@@ -305,7 +314,7 @@ def generate_my_teams(exel_file):
                 for pname_in_list in team_comb_dict[k]:
                     if pname_in_list:
                         pname = pname_in_list[0]
-                        if (len(team) < 11 and pname not in team):
+                        if (len(team) < 11 and pname not in team and can_add_this_player_by_color(team,my_team_players,pname)):
                             team.append(pname)
                             if my_team_player_count.get(pname, None) == None:
                                 my_team_player_count[pname] = 1
@@ -520,7 +529,7 @@ def generate_my_teams(exel_file):
         wb.save(team_output)
         team_output.seek(0)
 
-        file_name = exel_file.name
+        file_name = file_name
         # Step 4: Create a download button
         btn = st.download_button(
             label="Download Excel with My Team Formation",
@@ -812,35 +821,86 @@ if process_button:
             
                 
 if my_team_formation:
+
+
     form = st.form("my_form")
     with form:
+        wb = load_workbook(teams_file)
+        sheet_names = wb.sheetnames
 
         expected_team_count = st.number_input("Enter no of team required.", min_value=3,
                                                max_value=5000, 
                                                step=1,
                                                  format='%d', key="input_team_generation_count")
         
-        if use_user_weight:
-            wb = load_workbook(teams_file, read_only=True)
-            sheet_names = wb.sheetnames
         
-            st.header("Player Weight")
-            if my_team_sheet_name in sheet_names:
-                my_team_sheet = wb[my_team_sheet_name]
-                gph_idx = f"A19:C40"
-                
-                i = 0
-                for row in my_team_sheet[gph_idx]:
-                    if row[0] is not None:
-                        name = row[0].value
-                        input_key = f"input_myteam_{i}_{name}"
-                        st.text_input(f"{i}.{name}",key=input_key)
-                        i = i + 1
+        if my_team_sheet_name not in sheet_names:
+            my_team_payers = {}
+            new_my_teams_sheet = wb.create_sheet(my_team_sheet_name)
 
-            wb.close()
+            cvc_sheet = wb["C VC"]
+            for row in cvc_sheet:
+                if row[0].value is None:
+                    break
+                fill = row[0].fill
+                print(row[0].value.lower())
+                if row[0].value.lower() == "name":
+                    pass
+                elif (fill.patternType == 'solid' and fill.fgColor.rgb == "FFFFFF00"):
+                    pass
+                else:
+                    ptype_grp = match = re.search(r'\((.*?)\)', row[0].value)
+                    ptype = ""
+                    if ptype_grp:
+                        ptype = ptype_grp.group(1)
+                    
+                    if row[0].font and row[0].font.color:
+                        font_color = row[0].font.color.rgb
+                        if font_color  == RED:
+                            color = "r"
+                        else:
+                            color = "b"
+                    else:
+                        color = "b"
+                        
+                    my_team_payers[row[0].value] = {"color" : color, "type": ptype}
+            
+            row = 19
+            for k,v in my_team_payers.items():
+                if v["color"] == "r":
+                    red_font = Font(color=RED) 
+                    new_my_teams_sheet.cell(row=row, column=1).font = red_font
+                else:
+                    black_font = Font(color=BLACK) 
+                    new_my_teams_sheet.cell(row=row, column=1).font = black_font
+                new_my_teams_sheet.cell(row=row, column=1).value =k
+                if len(v["type"])>1:
+                    valid_ptype = v["type"][0].upper()+v["type"][1].lower()
+                else:
+                    valid_ptype = v["type"][0].upper()
+                new_my_teams_sheet.cell(row=row, column=2).value = valid_ptype
+
+                row = row + 1
+
+            
+        if use_user_weight:
+            st.header("Player Weight")
+            my_team_sheet = wb[my_team_sheet_name]
+            gph_idx = f"A19:C40"
+            
+            i = 0
+            for row in my_team_sheet[gph_idx]:
+                if row[0] is not None:
+                    name = row[0].value
+                    vlu =row[2].value if row[2].value is not None else 0  
+                    
+                    input_key = f"input_myteam_{i}_{name}"
+                    st.text_input(f"{i}.{name}",key=input_key, value= vlu)
+                    i = i + 1
+
         submit_btn = form.form_submit_button("Generate Team",
                                               on_click=generate_my_teams,
-                                              args=(teams_file,))
+                                              args=(wb,teams_file.name)) #teams_file
         
 
             
