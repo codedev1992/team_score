@@ -354,10 +354,10 @@ def generate_my_teams(master_wb, file_name):
         #     print(team_comb_dict)
 
 
-        random.shuffle(my_team)
+        # random.shuffle(my_team)
 
-        for t in my_team:
-            random.shuffle(t)
+        # for t in my_team:
+        #     random.shuffle(t)
 
         check_and_replace_players(my_team_players,my_team,team_comb_dict,play_expt_cmb_cnt)
 
