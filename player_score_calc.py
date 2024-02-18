@@ -402,7 +402,7 @@ def generate_my_teams(master_wb, file_name):
                     tm.append("NOT ABLE TO FILL")
             
 
-        print(team_comb_dict)
+        #print(team_comb_dict)
 
         write_range = f"A2:{last_col_name}12"
         min_col, min_row, max_col, max_row = range_boundaries(write_range)
@@ -864,7 +864,7 @@ if my_team_formation:
                 if row[0].value is None:
                     break
                 if row[0].value.lower() != "name":
-                    print(row[0].value, row[1].value)
+                    #print(row[0].value, row[1].value)
                     if row[1].value:
                         sel_player_weight[row[0].value] = eval(str(row[1].value))
                     else:
