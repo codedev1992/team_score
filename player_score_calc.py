@@ -30,6 +30,8 @@ players_sheet_name  = "PlayersList"
 sheet_to_use = "Copy of Teams"
 teams_list_sheet_name = "TeamsList"
 my_team_sheet_name = "My Teams"
+sel_value_sheet_name = "Sel Value"
+
 
 C_COLOR = ["FF00FF00","FF00B050"]
 VC_COLOR = ["FFFFFF00"] 
@@ -399,6 +401,8 @@ def generate_my_teams(master_wb, file_name):
                 for i in range(missing_no_of_players):
                     tm.append("NOT ABLE TO FILL")
             
+
+        print(team_comb_dict)
 
         write_range = f"A2:{last_col_name}12"
         min_col, min_row, max_col, max_row = range_boundaries(write_range)
@@ -852,7 +856,20 @@ if my_team_formation:
                                                step=1,
                                                  format='%d', key="input_team_generation_count")
         
-        
+        sel_player_weight = {}
+
+        if sel_value_sheet_name in sheet_names:
+            sel_value_sheet = wb[sel_value_sheet_name]
+            for row in sel_value_sheet:
+                if row[0].value is None:
+                    break
+                if row[0].value.lower() != "name":
+                    print(row[0].value, row[1].value)
+                    if row[1].value:
+                        sel_player_weight[row[0].value] = eval(str(row[1].value))
+                    else:
+                        sel_player_weight[row[0].value] = 0
+
         if my_team_sheet_name not in sheet_names:
             my_team_payers = {}
             new_my_teams_sheet = wb.create_sheet(my_team_sheet_name)
@@ -881,8 +898,14 @@ if my_team_formation:
                             color = "b"
                     else:
                         color = "b"
-                        
-                    my_team_payers[row[0].value] = {"color" : color, "type": ptype}
+
+                    name_grp = re.search(r'^(.*?)\s*\(', row[0].value)
+
+                    name = ""
+                    if name_grp:
+                        name = name_grp.group(1)
+
+                    my_team_payers[name] = {"color" : color, "type": ptype}
             
             row = 19
             for k,v in my_team_payers.items():
@@ -898,6 +921,9 @@ if my_team_formation:
                 else:
                     valid_ptype = v["type"][0].upper()
                 new_my_teams_sheet.cell(row=row, column=2).value = valid_ptype
+
+                new_my_teams_sheet.cell(row=row, column=3).value = sel_player_weight.get(k,0)
+
 
                 row = row + 1
 
