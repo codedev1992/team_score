@@ -74,7 +74,7 @@ def check_and_replace_players(my_team_players,my_team,team_comb_dict,min_max_rul
             # print(idx)
             no_plyr_required = 11 - len(team)
             team_status = all_team_current_status[idx]
-
+            #print(team_status,team_comb_dict)
             clr_to_replace = 'b' if team_status['b'] > team_status['r'] else 'r'
             # print(team_comb_dict)
             for pcat,pname_list in team_comb_dict.items():
@@ -153,6 +153,7 @@ def can_add_this_player_by_color(team,mapping, new_player):
         return False
 
 def get_team_combination(no_team,player_to_type,player_weights):
+    #print(player_to_type,player_weights)
 
     output = {
         "W" :[],
@@ -205,6 +206,7 @@ def get_team_combination(no_team,player_to_type,player_weights):
     # if DEBUG:
     #     print(output)
 
+ 
     return output
 
 def generate_my_teams(master_wb, file_name):
@@ -322,6 +324,7 @@ def generate_my_teams(master_wb, file_name):
                                 my_team_player_count[pname] = my_team_player_count[pname] + 1
                             pname_in_list.pop(0)
 
+        #print(no_team, len(my_team))
 
         # sid, eid= 0, int(no_team / 2)
         # for clr in ["b","r"]:
@@ -371,8 +374,8 @@ def generate_my_teams(master_wb, file_name):
                     tems_cnt[pcolor] = tems_cnt[pcolor] + 1
         
             teams_status.append(tems_cnt)
-            update_team.append(t_count)
-            update_team.append(t_count)
+            # update_team.append(t_count)
+            # update_team.append(t_count)
             t_count = t_count + 1
         
         
@@ -388,10 +391,18 @@ def generate_my_teams(master_wb, file_name):
                 cell.value = team_idx
             team_idx = team_idx + 1
 
+        p_count = 0
+        for tm in my_team:
+            p_count = p_count + len(tm)
+            if len(tm) < 11:
+                missing_no_of_players = 11 - len(tm)
+                for i in range(missing_no_of_players):
+                    tm.append("NOT ABLE TO FILL")
+            
 
         write_range = f"A2:{last_col_name}12"
         min_col, min_row, max_col, max_row = range_boundaries(write_range)
-        print(min_col, min_row, max_col, max_row)
+        #print(min_col, min_row, max_col, max_row)
         for col in range(min_col, max_col + 1):
             max_pname_len = 0
             for row in range(min_row, max_row + 1):
@@ -828,7 +839,15 @@ if my_team_formation:
         wb = load_workbook(teams_file)
         sheet_names = wb.sheetnames
 
-        expected_team_count = st.number_input("Enter no of team required.", min_value=3,
+        min_value_match = re.search(r'\b(\d+)T\b', teams_file.name)
+
+        # Extracting the value
+        if min_value_match:
+            extracted_min_value = min_value_match.group(1)
+        else:
+            extracted_min_value = 3
+
+        expected_team_count = st.number_input("Enter no of team required.", min_value=int(extracted_min_value),
                                                max_value=5000, 
                                                step=1,
                                                  format='%d', key="input_team_generation_count")
@@ -843,7 +862,7 @@ if my_team_formation:
                 if row[0].value is None:
                     break
                 fill = row[0].fill
-                print(row[0].value.lower())
+                #print(row[0].value.lower())
                 if row[0].value.lower() == "name":
                     pass
                 elif (fill.patternType == 'solid' and fill.fgColor.rgb == "FFFFFF00"):
