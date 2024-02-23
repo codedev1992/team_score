@@ -257,7 +257,7 @@ def manual_generate_my_teams(master_wb, file_name):
     if my_team_sheet_name in sheet_names:
         my_team_players = {}
         my_team_sheet = wb[my_team_sheet_name]
-        gph_idx = f"A19:C40"
+        gph_idx = f"A19:C45"
         
         rnk = 1 
         top_11_players = []
@@ -269,7 +269,7 @@ def manual_generate_my_teams(master_wb, file_name):
             "W":[]
         }
         for row in my_team_sheet[gph_idx]:
-            if row[0] is not None:
+            if row[0] is not None and row[0].value is not None:
                 
                 if row[0].font and row[0].font.color:
                     font_color = row[0].font.color.rgb
@@ -339,8 +339,18 @@ def manual_generate_my_teams(master_wb, file_name):
 
             for m_tm_idx in range(s_tm_idx, e_tm_idx,1):
                 if pidx < len(rslt):
-                    my_team[(m_tm_idx % no_team)][lidx] = rslt[pidx]
-                pidx = pidx + 1
+                    if rslt[pidx] not in my_team[(m_tm_idx % no_team)]:
+                        my_team[(m_tm_idx % no_team)][lidx] = rslt[pidx]
+                        pidx = pidx + 1
+                    else:
+                        if (pidx + 1) < len(rslt):
+                            tmp = rslt[pidx] 
+                            rslt[pidx] = rslt[pidx + 1]
+                            rslt[pidx + 1] = tmp 
+                            my_team[(m_tm_idx % no_team)][lidx] = rslt[pidx]
+                            pidx = pidx + 1
+
+
 
             s_tm_idx = e_tm_idx
 
@@ -499,7 +509,7 @@ def manual_generate_my_teams(master_wb, file_name):
         master_compute.append([wgt_w, wgt_ba,wgt_bo,wgt_a])
         master_compute.append(list(diff_weight.values()))
 
-        write_range = f"D19:D40"
+        write_range = f"D19:D45"
         min_col, min_row, max_col, max_row = range_boundaries(write_range)
         
         cell = my_team_sheet["D18"]
@@ -509,7 +519,7 @@ def manual_generate_my_teams(master_wb, file_name):
             for row in range(min_row, max_row + 1):
                 pname = my_team_sheet.cell(row=row, column=1)
                 cell = my_team_sheet.cell(row=row, column=col)
-                cell.value = my_team_players[pname.value].get("weight")
+                cell.value = my_team_players.get(pname.value,{}).get("weight",0)
 
         write_range = f"G19:J24"
         min_col, min_row, max_col, max_row = range_boundaries(write_range)
@@ -1239,13 +1249,20 @@ if my_team_formation:
         if use_user_weight:
             st.header("Player Weight")
             my_team_sheet = wb[my_team_sheet_name]
-            gph_idx = f"A19:C40"
+            gph_idx = f"A19:C45"
             
             i = 0
             for row in my_team_sheet[gph_idx]:
-                if row[0] is not None:
+                if row[0].value is not None:
                     name = row[0].value
-                    vlu =row[2].value if row[2].value is not None else 0  
+                    user_wgt = 0
+                    if row[2].value is not None:
+                        user_wgt = row[2].value
+                    elif sel_player_weight.get(name,None) is not None:
+                        user_wgt = sel_player_weight.get(name)
+                    else:
+                        user_wgt = 0 
+                    vlu =user_wgt #row[2].value if row[2].value is not None else 0  
                     
                     input_key = f"input_myteam_{i}_{name}"
                     st.text_input(f"{i}.{name}",key=input_key, value= vlu)
