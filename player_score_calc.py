@@ -18,13 +18,14 @@ c1,c2 = st.columns(2)
 with c1:
     process_button = st.button("process")
 with c2:
-    ic1,ic2 = st.columns(2)
+    ic1,ic2,ic3 = st.columns(3)
     with ic1:
         use_user_weight = st.checkbox("Use Manual Weight", key="use_manual_weight")
-
-    with ic2: 
+    with ic2:
+        is_retro_game = st.checkbox("Is Retro Game", key="is_retro_game")
+    with ic3: 
         my_team_formation = st.button("My Team Process")
- 
+        
 
 players_sheet_name  = "PlayersList"
 sheet_to_use = "Copy of Teams"
@@ -545,17 +546,6 @@ def manual_generate_my_teams(master_wb, file_name):
             file_name="my_team_updated_"+file_name,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-
-
-                
-
-
-
-            
-
-
-
-
 
 def generate_my_teams(master_wb, file_name):
     no_team = st.session_state["input_team_generation_count"]
@@ -1198,33 +1188,83 @@ if my_team_formation:
                     break
                 fill = row[0].fill
                 #print(row[0].value.lower())
+                is_player_to_be_considered = False
+
                 if row[0].value.lower() == "name":
+                    is_player_to_be_considered = False
                     pass
-                elif (fill.patternType == 'solid' and fill.fgColor.rgb == "FFFFFF00"):
-                    pass
+                
+                elif not is_retro_game:
+                    if (fill.patternType == 'solid' and fill.fgColor.rgb == "FFFFFF00"):
+                        is_player_to_be_considered = False
+                        pass
+                    else:
+                        is_player_to_be_considered = True
                 else:
-                    ptype_grp = match = re.search(r'\((.*?)\)', row[0].value)
-                    ptype = ""
-                    if ptype_grp:
-                        ptype = ptype_grp.group(1)
-                    
-                    if row[0].font and row[0].font.color:
-                        font_color = row[0].font.color.rgb
-                        if font_color  == RED:
-                            color = "r"
+                    if (fill.patternType == 'solid' and fill.fgColor.rgb == "FFFFFF00"):
+                        if row[1].value is not None and len(row[0].value) > 2 and row[1].value.lower() == "playing":
+                            is_player_to_be_considered = True
+                    else:
+                        if row[1].value is not None and len(row[0].value) > 2 and row[1].value.lower() in ["not playing","non playing"]:
+                            is_player_to_be_considered = False
+                        else:
+                            is_player_to_be_considered = True
+                
+                if is_player_to_be_considered:
+                    if len(row[0].value) > 3:
+                        ptype_grp = match = re.search(r'\((.*?)\)', row[0].value)
+                        ptype = ""
+                        if ptype_grp:
+                            ptype = ptype_grp.group(1)
+                        
+                        if row[0].font and row[0].font.color:
+                            font_color = row[0].font.color.rgb
+                            if font_color  == RED:
+                                color = "r"
+                            else:
+                                color = "b"
                         else:
                             color = "b"
-                    else:
-                        color = "b"
 
-                    name_grp = re.search(r'^(.*?)\s*\(', row[0].value)
+                        name_grp = re.search(r'^(.*?)\s*\(', row[0].value)
 
-                    name = ""
-                    if name_grp:
-                        name = name_grp.group(1)
+                        name = ""
+                        if name_grp:
+                            name = name_grp.group(1)
 
-                    my_team_payers[name] = {"color" : color, "type": ptype}
-            
+                        my_team_payers[name] = {"color" : color, "type": ptype}
+
+
+            retro_new_weight = {}
+            if is_retro_game:
+                ws = wb[sheet_to_use]
+                # Element you're searching for
+                search_element =  list(my_team_payers.keys())[0]
+
+                # Iterate over rows starting from row 25 and columns up to 34
+                restricted_locations = []
+
+                # Iterate over all rows starting from row 25 to find occurrences of "J Charles" in columns up to 34
+                for row_idx, row in enumerate(ws.iter_rows(min_row=25, max_col=34, values_only=True), start=25):
+                    # Track columns where "J Charles" is found in the current row (restricted to columns 1 through 34)
+                    current_row_occurrences = [col_idx + 1 for col_idx, cell in enumerate(row[:34]) 
+                                            if cell and search_element.lower() in str(cell).lower()]
+                    
+                    # If "J Charles" appears at least twice in the same row, record the row and column numbers
+                    if len(current_row_occurrences) >= 2:
+                        restricted_locations.append((current_row_occurrences, row_idx))
+                        break  
+
+                identified_columns = restricted_locations[0][0]  # Extracting column indices from the first found location
+
+                
+                for row_idx, row in enumerate(ws.iter_rows(min_row=24, max_row=80, min_col =identified_columns[0],
+                                                    max_col=identified_columns[1], values_only=True), start=24):
+                    
+                    if row[0] and row[2] and row[0] == row[2]:
+                        retro_new_weight[row[0].strip()] =  row[1] if row[1] else 0
+
+            #print(retro_new_weight)
             row = 19
             for k,v in my_team_payers.items():
                 if v["color"] == "r":
@@ -1239,9 +1279,11 @@ if my_team_formation:
                 else:
                     valid_ptype = v["type"][0].upper()
                 new_my_teams_sheet.cell(row=row, column=2).value = valid_ptype
-
-                new_my_teams_sheet.cell(row=row, column=3).value = sel_player_weight.get(k,0)
-
+                
+                if not is_retro_game:
+                    new_my_teams_sheet.cell(row=row, column=3).value = sel_player_weight.get(k,0)
+                else:
+                    new_my_teams_sheet.cell(row=row, column=3).value = retro_new_weight.get(k,0)
 
                 row = row + 1
 
