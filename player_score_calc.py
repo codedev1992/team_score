@@ -1169,10 +1169,12 @@ if my_team_formation:
         else:
             extracted_min_value = 3
 
-        expected_team_count = st.number_input("Enter no of team required.", min_value=int(extracted_min_value),
+        expected_team_count = st.number_input("Enter no of team required.", min_value=3,
                                                max_value=5000, 
+                                               value=20,
                                                step=1,
-                                                 format='%d', key="input_team_generation_count")
+                                               format='%d', 
+                                               key="input_team_generation_count")
         
         sel_player_weight = {}
 
@@ -1317,7 +1319,7 @@ if my_team_formation:
                     vlu =user_wgt #row[2].value if row[2].value is not None else 0  
                     
                     input_key = f"input_myteam_{i}_{name}"
-                    st.text_input(f"{i}.{name}",key=input_key, value= vlu)
+                    st.text_input(f"{i+1}.{name}",key=input_key, value= vlu)
                     i = i + 1
 
         submit_btn = form.form_submit_button("Generate Team",
