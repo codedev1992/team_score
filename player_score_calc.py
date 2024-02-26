@@ -269,6 +269,7 @@ def manual_generate_my_teams(master_wb, file_name):
             "Bo":[],
             "W":[]
         }
+
         for row in my_team_sheet[gph_idx]:
             if row[0] is not None and row[0].value is not None:
                 
@@ -1148,6 +1149,15 @@ if my_team_formation:
 
     form = st.form("my_form")
     with form:
+        player_cat_mapping = {
+            "ar" : "A",
+            "ba" : "Ba",
+            "bo" : "Bo",
+            "w" : "W",
+            "a" : "A"
+            
+        }
+         
         wb = load_workbook(teams_file)
         sheet_names = wb.sheetnames
 
@@ -1174,9 +1184,9 @@ if my_team_formation:
                 if row[0].value.lower() != "name":
                     #print(row[0].value, row[1].value)
                     if row[1].value:
-                        sel_player_weight[row[0].value] = eval(str(row[1].value))
+                        sel_player_weight[row[0].value.strip()] = eval(str(row[1].value))
                     else:
-                        sel_player_weight[row[0].value] = 0
+                        sel_player_weight[row[0].value.strip()] = 0
 
         if my_team_sheet_name not in sheet_names:
             my_team_payers = {}
@@ -1232,7 +1242,7 @@ if my_team_formation:
                         if name_grp:
                             name = name_grp.group(1)
 
-                        my_team_payers[name] = {"color" : color, "type": ptype}
+                        my_team_payers[name.strip()] = {"color" : color, "type": player_cat_mapping.get(ptype.lower(),"W")}
 
 
             retro_new_weight = {}
@@ -1281,9 +1291,9 @@ if my_team_formation:
                 new_my_teams_sheet.cell(row=row, column=2).value = valid_ptype
                 
                 if not is_retro_game:
-                    new_my_teams_sheet.cell(row=row, column=3).value = sel_player_weight.get(k,0)
+                    new_my_teams_sheet.cell(row=row, column=3).value = int(sel_player_weight.get(k,0))
                 else:
-                    new_my_teams_sheet.cell(row=row, column=3).value = retro_new_weight.get(k,0)
+                    new_my_teams_sheet.cell(row=row, column=3).value = int(retro_new_weight.get(k,0))
 
                 row = row + 1
 
@@ -1301,7 +1311,7 @@ if my_team_formation:
                     if row[2].value is not None:
                         user_wgt = row[2].value
                     elif sel_player_weight.get(name,None) is not None:
-                        user_wgt = sel_player_weight.get(name)
+                        user_wgt = sel_player_weight.get(name.strip())
                     else:
                         user_wgt = 0 
                     vlu =user_wgt #row[2].value if row[2].value is not None else 0  
