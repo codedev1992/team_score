@@ -868,7 +868,7 @@ def generate_my_teams(master_wb, file_name):
 def player_credit_from_excel_sheet(sheet):
     players_credits = {}
     for row in sheet.iter_rows(min_row=2, values_only=True):  # Assuming first row is header
-        name, credit = row
+        name, credit = row[0],row[1]
         players_credits[name] = credit if credit is not None else 0
     return players_credits
 
