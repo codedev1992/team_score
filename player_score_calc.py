@@ -48,6 +48,12 @@ PLAYER_TYPE_RULES = {
 "Bo": {"min" : 3, "max": 6},
 }
 
+PLAYER_TYPE_RULES_RELAXED = {
+"W": {"min" : 1, "max": 11},
+"Ba" :{"min" : 1, "max": 11},
+"A": {"min" : 1, "max": 11},
+"Bo": {"min" : 1, "max": 11},
+}
 
 
 def util_transpose(l1):
@@ -230,7 +236,7 @@ def get_team_combination(no_team,player_to_type,player_weights):
 
 def manual_generate_my_teams(master_wb, file_name):
     no_team = st.session_state["input_team_generation_count"]
-
+    is_use_relax_rule = st.session_state["is_use_relax_rule"]
     is_manual_weight = st.session_state["use_manual_weight"]
 
     player_credit = {}
@@ -426,6 +432,12 @@ def manual_generate_my_teams(master_wb, file_name):
             col_letter = get_column_letter(col)
             my_team_sheet.column_dimensions[col_letter].width = max_pname_len
         
+
+        RULE_TO_USE = {}
+        if is_use_relax_rule:
+            RULE_TO_USE = PLAYER_TYPE_RULES_RELAXED
+        else:
+            RULE_TO_USE  = PLAYER_TYPE_RULES
         
         write_range = f"A13:{last_col_name}18"
         min_col, min_row, max_col, max_row = range_boundaries(write_range)
@@ -456,16 +468,16 @@ def manual_generate_my_teams(master_wb, file_name):
 
             not_perfects = []
 
-            if not (PLAYER_TYPE_RULES["A"]["min"] <= a_count  and a_count <= PLAYER_TYPE_RULES["A"]["max"]):
+            if not (RULE_TO_USE["A"]["min"] <= a_count  and a_count <= RULE_TO_USE["A"]["max"]):
                 not_perfects.append(a_count_str) 
             
-            if not (PLAYER_TYPE_RULES["W"]["min"] <= w_count  and w_count <= PLAYER_TYPE_RULES["W"]["max"]):
+            if not (RULE_TO_USE["W"]["min"] <= w_count  and w_count <= RULE_TO_USE["W"]["max"]):
                 not_perfects.append(w_count_str) 
             
-            if not (PLAYER_TYPE_RULES["Ba"]["min"] <= ba_count  and ba_count <= PLAYER_TYPE_RULES["Ba"]["max"]):
+            if not (RULE_TO_USE["Ba"]["min"] <= ba_count  and ba_count <= RULE_TO_USE["Ba"]["max"]):
                 not_perfects.append(ba_count_str) 
             
-            if not (PLAYER_TYPE_RULES["Bo"]["min"] <= bo_count  and bo_count <= PLAYER_TYPE_RULES["Bo"]["max"]):
+            if not (RULE_TO_USE["Bo"]["min"] <= bo_count  and bo_count <= RULE_TO_USE["Bo"]["max"]):
                 not_perfects.append(bo_count_str) 
             
             p_cnt = a_count + w_count + ba_count + bo_count
@@ -1176,6 +1188,8 @@ if my_team_formation:
                                                step=1,
                                                format='%d', 
                                                key="input_team_generation_count")
+
+        is_use_relax_rule = st.checkbox("Use Relax Rule",key="is_use_relax_rule")
         
         sel_player_weight = {}
 
