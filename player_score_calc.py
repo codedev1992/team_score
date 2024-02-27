@@ -320,41 +320,42 @@ def manual_generate_my_teams(master_wb, file_name):
 
         rslt = util_T_to_1D_list(btm_players_2d_T)
 
-        pidx, idx,lidx = 0, 0, len(bottom_11_player)-1
+        pidx, idx,lidx = 0, 0, len(top_11_players)-1
         s_tm_idx = 0
         e_tm_idx = 0
         for j in range(len(bottom_11_player)-1, -1,-1):
              
-            wgt = my_team_players[bottom_11_player[idx]].get("weight", 0)
+            wgt = no_team-my_team_players[top_11_players[j]].get("weight", 0) 
             
-            plyr_range = wgt
-            # if wgt < len(rslt):
-            #     plyr_range = wgt
-            # else:
-            #     plyr_range = len(rslt)
+            if wgt > 0:
+                plyr_range = wgt
+                # if wgt < len(rslt):
+                #     plyr_range = wgt
+                # else:
+                #     plyr_range = len(rslt)
 
-            # sub_list_players = rslt[0:plyr_range-1]
+                # sub_list_players = rslt[0:plyr_range-1]
 
-            # rslt = rslt[plyr_range:]
+                # rslt = rslt[plyr_range:]
 
-            e_tm_idx = s_tm_idx + plyr_range
+                e_tm_idx = s_tm_idx + plyr_range
 
-            for m_tm_idx in range(s_tm_idx, e_tm_idx,1):
-                if pidx < len(rslt):
-                    if rslt[pidx] not in my_team[(m_tm_idx % no_team)]:
-                        my_team[(m_tm_idx % no_team)][lidx] = rslt[pidx]
-                        pidx = pidx + 1
-                    else:
-                        if (pidx + 1) < len(rslt):
-                            tmp = rslt[pidx] 
-                            rslt[pidx] = rslt[pidx + 1]
-                            rslt[pidx + 1] = tmp 
+                for m_tm_idx in range(s_tm_idx, e_tm_idx,1):
+                    if pidx < len(rslt):
+                        if rslt[pidx] not in my_team[(m_tm_idx % no_team)]:
                             my_team[(m_tm_idx % no_team)][lidx] = rslt[pidx]
                             pidx = pidx + 1
+                        else:
+                            if (pidx + 1) < len(rslt):
+                                tmp = rslt[pidx] 
+                                rslt[pidx] = rslt[pidx + 1]
+                                rslt[pidx + 1] = tmp 
+                                my_team[(m_tm_idx % no_team)][lidx] = rslt[pidx]
+                                pidx = pidx + 1
 
 
 
-            s_tm_idx = e_tm_idx
+                s_tm_idx = e_tm_idx
 
             idx = idx + 1
             lidx = lidx - 1
