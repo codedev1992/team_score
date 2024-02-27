@@ -61,13 +61,13 @@ def util_T_to_1D_list(_2dT):
     for i in range(len(_2dT)):
         # Rotate the sublist by one position to the left and add the first element to the result list
         sublist = _2dT[i]
-        # Rotate by taking elements from 1 to end and then the first element
-        rotate_idx = i%len(sublist)
+        # # Rotate by taking elements from 1 to end and then the first element
+        # rotate_idx = i%len(sublist)
 
-        if i !=0:
-            emlt_to_rotte = sublist[rotate_idx]
-            sublist.pop(rotate_idx)
-            sublist.append(emlt_to_rotte)
+        # if i !=0:
+        #     emlt_to_rotte = sublist[rotate_idx]
+        #     sublist.pop(rotate_idx)
+        #     sublist.append(emlt_to_rotte)
         rotated_sublist =  sublist #sublist[i:] + sublist[:i]
     
         # Append the first element of the rotated sublist to the result
