@@ -397,16 +397,6 @@ def manual_generate_my_teams(master_wb, file_name):
                                     if is_player_replaced:
                                         break
 
-                                 
-
-
-                                                        
-                            # if (pidx + 1) < len(rslt):
-                            #     tmp = rslt[pidx] 
-                            #     rslt[pidx] = rslt[pidx + 1]
-                            #     rslt[pidx + 1] = tmp 
-                            #     my_team[(m_tm_idx % no_team)][lidx] = rslt[pidx]
-                            #     pidx = pidx + 1
 
                 s_tm_idx = e_tm_idx
 
@@ -452,6 +442,7 @@ def manual_generate_my_teams(master_wb, file_name):
             
 
         #print(team_comb_dict)
+        my_team_player_count = {}
 
         write_range = f"A2:{last_col_name}12"
         min_col, min_row, max_col, max_row = range_boundaries(write_range)
@@ -460,6 +451,12 @@ def manual_generate_my_teams(master_wb, file_name):
             max_pname_len = 0
             for row in range(min_row, max_row + 1):
                 pname = my_team[col-1][row-2]
+
+                if my_team_player_count.get(pname, None) is None:
+                    my_team_player_count[pname] = 1 
+                else:
+                    my_team_player_count[pname] = my_team_player_count[pname] + 1 
+
                 cell = my_team_sheet.cell(row=row, column=col)
                 if len(str(pname)) > max_pname_len:
                     max_pname_len = len(str(pname))
@@ -582,6 +579,19 @@ def manual_generate_my_teams(master_wb, file_name):
                 pname = my_team_sheet.cell(row=row, column=1)
                 cell = my_team_sheet.cell(row=row, column=col)
                 cell.value = my_team_players.get(pname.value,{}).get("weight",0)
+
+        write_range = f"E19:E45"
+        min_col, min_row, max_col, max_row = range_boundaries(write_range)
+        
+        cell = my_team_sheet["E18"]
+        cell.value = "My Team Player Count"
+
+        for col in range(min_col, max_col + 1):
+            for row in range(min_row, max_row + 1):
+                pname = my_team_sheet.cell(row=row, column=1)
+                cell = my_team_sheet.cell(row=row, column=col)
+                cell.value = my_team_player_count.get(pname.value,0)
+
 
         write_range = f"G19:J24"
         min_col, min_row, max_col, max_row = range_boundaries(write_range)
