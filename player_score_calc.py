@@ -1121,6 +1121,12 @@ def compute_and_download(excel_data, is_player_sheet_exists):
 if process_button:
     wb = load_workbook(teams_file, read_only=False)
 
+    for sheet in wb.sheetnames:
+        new_name = sheet.strip()  # Remove trailing spaces from the sheet name
+        if new_name != sheet:
+            ws = wb[sheet]
+            ws.title = new_name
+
     is_all_okay, missing_team = check_all_team_marked_c_and_vc(wb[sheet_to_use])
     if is_all_okay:
 
@@ -1234,9 +1240,14 @@ if my_team_formation:
         }
          
         wb = load_workbook(teams_file)
+        for sheet in wb.sheetnames:
+            new_name = sheet.strip()  # Remove trailing spaces from the sheet name
+            if new_name != sheet:
+                ws = wb[sheet]
+                ws.title = new_name
+
         sheet_names = wb.sheetnames
        
-
         min_value_match = re.search(r'\b(\d+)T\b', teams_file.name)
 
         # Extracting the value
