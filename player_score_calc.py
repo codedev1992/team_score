@@ -326,7 +326,7 @@ def manual_generate_my_teams(master_wb, file_name):
 
         rslt = util_T_to_1D_list(btm_players_2d_T)
 
-        #print(rslt)
+        print(rslt)
 
         pidx, idx,lidx = 0, 0, len(top_11_players)-1
         s_tm_idx = 0
@@ -349,11 +349,12 @@ def manual_generate_my_teams(master_wb, file_name):
                 e_tm_idx = s_tm_idx + plyr_range
                 
                 m_tm_idx_offset = 0
-
+                print(s_tm_idx, e_tm_idx)
                 for m_tm_idx in range(s_tm_idx, e_tm_idx,1):
                     team_m_tm_idx = m_tm_idx + m_tm_idx_offset
                     if pidx < len(rslt):
                         if rslt[pidx] not in my_team[(team_m_tm_idx % no_team)]:
+                            print(pidx,rslt[pidx])
                             my_team[(team_m_tm_idx % no_team)][lidx] = rslt[pidx]
                             pidx = pidx + 1
                         else:
@@ -375,27 +376,31 @@ def manual_generate_my_teams(master_wb, file_name):
                             
                             if not is_player_replaced:
                                 
-                                m_tm_idx_offset = m_tm_idx_offset + 1
+                                while not is_player_replaced:
+                                    m_tm_idx_offset = m_tm_idx_offset + 1
 
-                                team_m_tm_idx =  m_tm_idx + m_tm_idx_offset
-                                #print(s_tm_idx, e_tm_idx, team_m_tm_idx, (team_m_tm_idx % no_team), pidx, len(rslt))
-                                end_idx = len(rslt) - pidx
-                                is_player_replaced = False
-                                for ti in range(0, end_idx):
-                                    tmp = rslt[pidx]
-                                    identified_player_to_swap_idx = pidx + ti
-                                    identified_player_to_swap = rslt[identified_player_to_swap_idx]
-                                    #print(identified_player_to_swap)
-                                    if identified_player_to_swap not in my_team[(team_m_tm_idx % no_team)]:
-                                        rslt[pidx] = rslt[identified_player_to_swap_idx]
-                                        rslt[identified_player_to_swap_idx] = tmp 
-                                        #print((team_m_tm_idx % no_team), lidx, rslt[pidx])
-                                        my_team[(team_m_tm_idx % no_team)][lidx] = rslt[pidx]
-                                        pidx = pidx + 1
-                                        is_player_replaced = True
+                                    team_m_tm_idx =  m_tm_idx + m_tm_idx_offset
+                                    #print(m_tm_idx, s_tm_idx, e_tm_idx, team_m_tm_idx, (team_m_tm_idx % no_team), pidx, len(rslt))
+                                    end_idx = len(rslt) - pidx
+                                    is_player_replaced = False
+                                    for ti in range(0, end_idx):
+                                        tmp = rslt[pidx]
+                                        identified_player_to_swap_idx = pidx + ti
+                                        identified_player_to_swap = rslt[identified_player_to_swap_idx]
+                                        #print(identified_player_to_swap)
+                                        if identified_player_to_swap not in my_team[(team_m_tm_idx % no_team)]:
+                                            rslt[pidx] = rslt[identified_player_to_swap_idx]
+                                            rslt[identified_player_to_swap_idx] = tmp 
+                                            #print((team_m_tm_idx % no_team), lidx, rslt[pidx],pidx)
+                                            my_team[(team_m_tm_idx % no_team)][lidx] = rslt[pidx]
+                                            pidx = pidx + 1
+                                            is_player_replaced = True
 
-                                    if is_player_replaced:
-                                        break
+                                        if is_player_replaced:
+                                            break
+
+                    else:
+                        print("pidx bigger now!", pidx)
 
 
                 s_tm_idx = e_tm_idx
@@ -1230,6 +1235,7 @@ if my_team_formation:
          
         wb = load_workbook(teams_file)
         sheet_names = wb.sheetnames
+       
 
         min_value_match = re.search(r'\b(\d+)T\b', teams_file.name)
 
