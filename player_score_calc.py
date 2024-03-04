@@ -18,6 +18,8 @@ DEBUG = True
 teams_file = st.file_uploader("upload teams excel file.")
 
 st.info("NOTE: For generating My Teams, the player value should start from A19")
+st.warning("NOTE 2: For Simple Process the team id, C and VC should be from F49 in sheet C VC")
+
 c1,c2,c3 = st.columns([1,1,3])
 with c1:
     process_button = st.button("Process")
@@ -39,6 +41,7 @@ sheet_to_use = "Copy of Teams"
 teams_list_sheet_name = "TeamsList"
 my_team_sheet_name = "My Teams"
 sel_value_sheet_name = "Sel Value"
+C_VC_sheet_name = "C VC"
 
 
 C_COLOR = ["FF00FF00","FF00B050"]
@@ -1238,95 +1241,140 @@ if process_with_myteam_button:
             ws = wb[sheet]
             ws.title = new_name 
 
-    
-    sel_player_weight = {}
-    if sel_value_sheet_name in wb.sheetnames:
-        sel_value_sheet = wb[sel_value_sheet_name]
-        v = 22
-        for row in sel_value_sheet:
-            if row[0].value is None:
-                break
-            if row[0].value.lower() != "name":
-                sel_player_weight[row[0].value.strip()] = v
-                v = v - 1
-    data = []
-    TEAMS = []
-    if my_team_sheet_name in wb.sheetnames:
-        sheet = wb[my_team_sheet_name]
-        last_column_with_data = 0 
-        for column in sheet.iter_rows(min_row=1, max_row=2):
-            for cell in column:
-                if cell.value is not None:
-                    last_column_with_data = cell.column
-
-        last_col_name = get_column_letter(last_column_with_data)
-        
-        last_column_with_data = last_column_with_data - 1
-
-        st.write("team count : ", last_column_with_data)
-
-        last_row_index = 12
-        last_idx = f"{last_col_name}{last_row_index}"
-
-        # Create the range string
-        gph_idx = f"B2:{last_idx}"
-
-        for row in sheet[gph_idx]:
-            r_values = []
-            for cell in row:
-                if cell.value is not None:
-                    r_values.append(sel_player_weight.get(cell.value,0))
-                else:
-                    r_values.append({"":0})
-            data.append(r_values)
-        
-        teams_name_idx = f"B1:{last_col_name}1"
-        #print("teams : ", teams_name_idx)
-        for row in sheet[teams_name_idx]:
-            for cell in row:
-                TEAMS.append(cell.value)
-
-        num_columns = len(data[0])
-        column_sums = [0] * num_columns
-        for row in data:
-            for i in range(num_columns):
-                column_sums[i] += row[i]
-
-        team_to_score = {}
-        for idx in range(len(TEAMS)):
-            team_to_score["T"+str(TEAMS[idx])] = column_sums[idx]
-
-        team_to_score_sorted = dict(sorted(team_to_score.items(), key=lambda item: item[1]))
-
-        if teams_list_sheet_name not in wb.sheetnames:
-            teams_sheet = wb.create_sheet(teams_list_sheet_name)
-            teams_sheet.append(["TeamName","Computed","Actual"])
-        else:
-            teams_sheet =wb[teams_list_sheet_name]
-
-        for idx, (key, value) in enumerate(team_to_score_sorted.items()):
-            teams_sheet["A"+str(idx+2)] = key
-            teams_sheet["B"+str(idx+2)] = value
-
-
-        output = BytesIO()
-        wb.save(output)
-        output.seek(0)
-
-        # Step 4: Create a download button
-
-        file_name = teams_file.name
-
-        btn = st.download_button(
-            label="Download My Team Processed Excel file",
-            data=output,
-            file_name="updated_file_"+file_name,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
-
+    if (C_VC_sheet_name not in wb.sheetnames or my_team_sheet_name not in wb.sheetnames):
+        st.write("Required sheets are missing. Check is C VC and My Teams are there.")
     else:
-        st.warning(f"{my_team_sheet_name} is not found.")
+        sel_player_weight = {}
+        if sel_value_sheet_name in wb.sheetnames:
+            sel_value_sheet = wb[sel_value_sheet_name]
+            v = 22
+            for row in sel_value_sheet:
+                if row[0].value is None:
+                    break
+                if row[0].value.lower() != "name":
+                    sel_player_weight[row[0].value.strip()] = v
+                    v = v - 1
+
+        
+        c_vc_weight = {}
+
+        start_row = 49
+        start_col = 6  # Column F
+        end_col = 9    # Column I
+
+        # Iterate from row 49 to the last row with data in column 'F'
+        cvc_sheet = wb[C_VC_sheet_name]
+        for row in range(start_row, cvc_sheet.max_row + 1):
+            # Assume we stop if the first cell in the range (column 'F' here) is empty
+            if cvc_sheet.cell(row=row, column=start_col).value is None:
+                break  # Stop the loop if the first cell in the 'F' column is empty
+            
+    
+            cell_idx = cvc_sheet.cell(row=row, column=6)
+            cell_C = cvc_sheet.cell(row=row, column=7)
+            cell_VC = cvc_sheet.cell(row=row, column=8)
+
+            c_value = sel_player_weight.get(cell_C.value, 0)
+            vc_value = sel_player_weight.get(cell_VC.value, 0) / 2
+            both_value = c_value + vc_value
+
+            key = str(cell_idx.value) + "#"+ cell_C.value + "#"+ cell_VC.value \
+                    + "#"+ str(c_value)  \
+                    + "#"+ str(vc_value) 
+
+            c_vc_weight[key] = both_value
+
+        c_vc_weight_descending = {k: v for k, v in sorted(c_vc_weight.items(), key=lambda item: item[1], reverse=True)}
+
+        data = []
+        TEAMS = []
+        if my_team_sheet_name in wb.sheetnames:
+            sheet = wb[my_team_sheet_name]
+            last_column_with_data = 0 
+            for column in sheet.iter_rows(min_row=1, max_row=2):
+                for cell in column:
+                    if cell.value is not None:
+                        last_column_with_data = cell.column
+
+            last_col_name = get_column_letter(last_column_with_data)
+            
+            last_column_with_data = last_column_with_data - 1
+
+            st.write("team count : ", last_column_with_data)
+
+            last_row_index = 12
+            last_idx = f"{last_col_name}{last_row_index}"
+
+            # Create the range string
+            gph_idx = f"B2:{last_idx}"
+
+            for row in sheet[gph_idx]:
+                r_values = []
+                for cell in row:
+                    if cell.value is not None:
+                        r_values.append(sel_player_weight.get(cell.value,0))
+                    else:
+                        r_values.append({"":0})
+                data.append(r_values)
+            
+            teams_name_idx = f"B1:{last_col_name}1"
+            #print("teams : ", teams_name_idx)
+            for row in sheet[teams_name_idx]:
+                for cell in row:
+                    TEAMS.append(cell.value)
+
+            num_columns = len(data[0])
+            column_sums = [0] * num_columns
+            for row in data:
+                for i in range(num_columns):
+                    column_sums[i] += row[i]
+
+            team_to_score = {}
+            for idx in range(len(TEAMS)):
+                team_to_score["T"+str(TEAMS[idx])] = column_sums[idx]
+
+            team_to_score_sorted = dict(sorted(team_to_score.items(), key=lambda item: item[1]))
+
+            if teams_list_sheet_name not in wb.sheetnames:
+                teams_sheet = wb.create_sheet(teams_list_sheet_name)
+                teams_sheet.append(["TeamName","Computed"," ", "idx", "C", "VC", "C weight", "VC weight", "Computed"])
+            else:
+                teams_sheet =wb[teams_list_sheet_name]
+
+            for idx, (key, value) in enumerate(team_to_score_sorted.items()):
+                teams_sheet["A"+str(idx+2)] = key
+                teams_sheet["B"+str(idx+2)] = value
+            
+
+            for idx,(key,value) in enumerate(c_vc_weight_descending.items()):
+                
+                vs = key.split("#")
+                teams_sheet["D"+str(idx+2)] = vs[0]
+                teams_sheet["E"+str(idx+2)] = vs[1]
+                teams_sheet["F"+str(idx+2)] = vs[2]
+                teams_sheet["G"+str(idx+2)] = vs[3]
+                teams_sheet["H"+str(idx+2)] = vs[4]
+
+                teams_sheet["I"+str(idx+2)] = value
+
+            output = BytesIO()
+            wb.save(output)
+            output.seek(0)
+
+            # Step 4: Create a download button
+
+            file_name = teams_file.name
+
+            btn = st.download_button(
+                label="Download My Team Processed Excel file",
+                data=output,
+                file_name="updated_file_"+file_name,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+
+        else:
+            st.warning(f"{my_team_sheet_name} is not found.")
    
                 
 if my_team_formation:
