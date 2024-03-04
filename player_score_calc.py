@@ -9,15 +9,22 @@ from openpyxl.styles import PatternFill
 import math
 import random
 
+
+st.set_page_config(layout="wide")
+
+
 DEBUG = True
 
 teams_file = st.file_uploader("upload teams excel file.")
 
 st.info("NOTE: For generating My Teams, the player value should start from A19")
-c1,c2 = st.columns(2)
+c1,c2,c3 = st.columns([1,1,3])
 with c1:
-    process_button = st.button("process")
+    process_button = st.button("Process")
 with c2:
+    process_with_myteam_button = st.button("Simple Process")
+
+with c3:
     ic1,ic2,ic3 = st.columns(3)
     with ic1:
         use_user_weight = st.checkbox("Use Manual Weight", key="use_manual_weight")
@@ -1223,11 +1230,106 @@ if process_button:
         st.write(missing_team)
 
 
-            
+if process_with_myteam_button:
+    wb = load_workbook(teams_file, read_only=False)
+    for sheet in wb.sheetnames:
+        new_name = sheet.strip()   
+        if new_name != sheet:
+            ws = wb[sheet]
+            ws.title = new_name 
+
+    
+    sel_player_weight = {}
+    if sel_value_sheet_name in wb.sheetnames:
+        sel_value_sheet = wb[sel_value_sheet_name]
+        v = 22
+        for row in sel_value_sheet:
+            if row[0].value is None:
+                break
+            if row[0].value.lower() != "name":
+                sel_player_weight[row[0].value.strip()] = v
+                v = v - 1
+    data = []
+    TEAMS = []
+    if my_team_sheet_name in wb.sheetnames:
+        sheet = wb[my_team_sheet_name]
+        last_column_with_data = 0 
+        for column in sheet.iter_rows(min_row=1, max_row=2):
+            for cell in column:
+                if cell.value is not None:
+                    last_column_with_data = cell.column
+
+        last_col_name = get_column_letter(last_column_with_data)
+        
+        last_column_with_data = last_column_with_data - 1
+
+        st.write("team count : ", last_column_with_data)
+
+        last_row_index = 12
+        last_idx = f"{last_col_name}{last_row_index}"
+
+        # Create the range string
+        gph_idx = f"B2:{last_idx}"
+
+        for row in sheet[gph_idx]:
+            r_values = []
+            for cell in row:
+                if cell.value is not None:
+                    r_values.append(sel_player_weight.get(cell.value,0))
+                else:
+                    r_values.append({"":0})
+            data.append(r_values)
+        
+        teams_name_idx = f"B1:{last_col_name}1"
+        #print("teams : ", teams_name_idx)
+        for row in sheet[teams_name_idx]:
+            for cell in row:
+                TEAMS.append(cell.value)
+
+        num_columns = len(data[0])
+        column_sums = [0] * num_columns
+        for row in data:
+            for i in range(num_columns):
+                column_sums[i] += row[i]
+
+        team_to_score = {}
+        for idx in range(len(TEAMS)):
+            team_to_score["T"+str(TEAMS[idx])] = column_sums[idx]
+
+        team_to_score_sorted = dict(sorted(team_to_score.items(), key=lambda item: item[1]))
+
+        if teams_list_sheet_name not in wb.sheetnames:
+            teams_sheet = wb.create_sheet(teams_list_sheet_name)
+            teams_sheet.append(["TeamName","Computed","Actual"])
+        else:
+            teams_sheet =wb[teams_list_sheet_name]
+
+        for idx, (key, value) in enumerate(team_to_score_sorted.items()):
+            teams_sheet["A"+str(idx+2)] = key
+            teams_sheet["B"+str(idx+2)] = value
+
+
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        # Step 4: Create a download button
+
+        file_name = teams_file.name
+
+        btn = st.download_button(
+            label="Download My Team Processed Excel file",
+            data=output,
+            file_name="updated_file_"+file_name,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+
+    else:
+        st.warning(f"{my_team_sheet_name} is not found.")
+   
                 
 if my_team_formation:
-
-
     form = st.form("my_form")
     with form:
         player_cat_mapping = {
@@ -1335,7 +1437,7 @@ if my_team_formation:
 
                         my_team_payers[name.strip()] = {"color" : color, "type": player_cat_mapping.get(ptype.lower(),"W")}
 
-
+            #print(my_team_payers)
             retro_new_weight = {}
             if is_retro_game:
                 ws = wb[sheet_to_use]
