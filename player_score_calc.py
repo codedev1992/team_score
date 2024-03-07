@@ -336,7 +336,7 @@ def manual_generate_my_teams(master_wb, file_name):
 
         rslt = util_T_to_1D_list(btm_players_2d_T)
 
-        print(rslt)
+        #print(rslt)
 
         pidx, idx,lidx = 0, 0, len(top_11_players)-1
         s_tm_idx = 0
@@ -359,12 +359,12 @@ def manual_generate_my_teams(master_wb, file_name):
                 e_tm_idx = s_tm_idx + plyr_range
                 
                 m_tm_idx_offset = 0
-                print(s_tm_idx, e_tm_idx)
+                #print(s_tm_idx, e_tm_idx)
                 for m_tm_idx in range(s_tm_idx, e_tm_idx,1):
                     team_m_tm_idx = m_tm_idx + m_tm_idx_offset
                     if pidx < len(rslt):
                         if rslt[pidx] not in my_team[(team_m_tm_idx % no_team)]:
-                            print(pidx,rslt[pidx])
+                            #print(pidx,rslt[pidx])
                             my_team[(team_m_tm_idx % no_team)][lidx] = rslt[pidx]
                             pidx = pidx + 1
                         else:
@@ -565,7 +565,7 @@ def manual_generate_my_teams(master_wb, file_name):
         w1,ba1,bo1,a1 = len(player_to_type["W"]),len(player_to_type["Ba"]),len(player_to_type["Bo"]),len(player_to_type["A"])
 
         exp_w, exp_ba, exp_bo, exp_a = w*no_team, ba*no_team, bo*no_team, a*no_team
-
+        #print(exp_w, exp_ba, exp_bo, exp_a, w1,ba1,bo1,a1)
         wgt_w, wgt_ba,wgt_bo,wgt_a = math.ceil(exp_w/w1),math.ceil(exp_ba/ba1),math.ceil(exp_bo/bo1),math.ceil(exp_a/a1)
 
         diff_weight = {
@@ -1145,6 +1145,7 @@ if process_button:
         
         data = []
         if sheet_to_use in wb.sheetnames:
+            
             sheet = wb[sheet_to_use]
             last_column_with_data = 0 
             for column in sheet.iter_rows(min_row=1, max_row=2):
@@ -1163,7 +1164,7 @@ if process_button:
 
             # Create the range string
             gph_idx = f"B2:{last_idx}"
-
+            print(gph_idx)
             for row in sheet[gph_idx]:
                 r_values = []
                 for cell in row:
@@ -1209,6 +1210,8 @@ if process_button:
             unique_players_dict = {list(x.keys())[0] for l in data for x in l}
 
             unique_players_list = list(unique_players_dict)
+            
+            print(unique_players_list)
 
             form = st.form("my_form")
 
@@ -1251,7 +1254,7 @@ if process_with_myteam_button:
             for row in sel_value_sheet:
                 if row[0].value is None:
                     break
-                if row[0].value.lower() != "name":
+                if row[0].value.lower().strip() != "name":
                     sel_player_weight[row[0].value.strip()] = v
                     v = v - 1
 
@@ -1307,7 +1310,7 @@ if process_with_myteam_button:
 
             # Create the range string
             gph_idx = f"B2:{last_idx}"
-
+            
             for row in sheet[gph_idx]:
                 r_values = []
                 for cell in row:
@@ -1422,7 +1425,7 @@ if my_team_formation:
             for row in sel_value_sheet:
                 if row[0].value is None:
                     break
-                if row[0].value.lower() != "name":
+                if row[0].value.lower().strip() != "name":
                     #print(row[0].value, row[1].value)
                     if row[1].value:
                         sel_player_weight[row[0].value.strip()] = eval(str(row[1].value))
@@ -1441,7 +1444,7 @@ if my_team_formation:
                 #print(row[0].value.lower())
                 is_player_to_be_considered = False
 
-                if row[0].value.lower() == "name":
+                if row[0].value.lower().strip() == "name":
                     is_player_to_be_considered = False
                     pass
                 
